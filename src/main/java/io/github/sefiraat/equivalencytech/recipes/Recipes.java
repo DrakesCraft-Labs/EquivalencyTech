@@ -1,6 +1,6 @@
 package io.github.sefiraat.equivalencytech.recipes;
 
-import io.github.sefiraat.equivalencytech.EquivalencyTech;;
+import io.github.sefiraat.equivalencytech.EquivalencyTech;
 import com.github.drakescraft_labs.slimefun4.api.items.SlimefunItemStack;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
