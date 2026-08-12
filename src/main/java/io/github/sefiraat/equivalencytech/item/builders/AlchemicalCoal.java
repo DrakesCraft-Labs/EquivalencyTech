@@ -1,6 +1,6 @@
 package io.github.sefiraat.equivalencytech.item.builders;
 
-import dev.dbassett.skullcreator.SkullCreator;
+import io.github.sefiraat.equivalencytech.misc.SkullItems;
 import io.github.sefiraat.equivalencytech.EquivalencyTech;
 import io.github.sefiraat.equivalencytech.configuration.ConfigStrings;
 import io.github.sefiraat.equivalencytech.statics.ContainerStorage;
@@ -36,7 +36,7 @@ public class AlchemicalCoal {
 
         ConfigStrings c = plugin.getConfigMainClass().getStrings();
 
-        item = SkullCreator. itemFromBase64(SkullTextures.ITEM_ALCHEMICAL_COAL);
+        item = SkullItems.fromBase64(SkullTextures.ITEM_ALCHEMICAL_COAL);
         ItemMeta im = item.getItemMeta();
         im.setDisplayName(Messages.THEME_ITEM_NAME_GENERAL + c.getItemAlchemicalCoalName());
         List<String> lore = new ArrayList<>();

@@ -1,6 +1,5 @@
 package io.github.sefiraat.equivalencytech.misc;
 
-import dev.dbassett.skullcreator.SkullCreator;
 import io.github.sefiraat.equivalencytech.EquivalencyTech;
 import io.github.sefiraat.equivalencytech.item.EQSlimefunItem;
 import io.github.sefiraat.equivalencytech.recipes.Recipes;
@@ -33,7 +32,7 @@ public class SlimefunEQAddon implements SlimefunAddon {
         // Category
         NamespacedKey categoryIdMain = new NamespacedKey(plugin, "danktech_main");
 
-        ItemStack categoryItemMain = SkullCreator.itemFromBase64(SkullTextures.ITEM_TRANSMUTATION_ORB);
+        ItemStack categoryItemMain = SkullItems.fromBase64(SkullTextures.ITEM_TRANSMUTATION_ORB);
         ItemMeta im = categoryItemMain.getItemMeta();
         im.setDisplayName(ChatColor.YELLOW + "EquivalencyTech");
         im.setLore(Collections.singletonList("&a> Click to open"));

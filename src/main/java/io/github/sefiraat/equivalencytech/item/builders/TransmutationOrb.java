@@ -1,6 +1,6 @@
 package io.github.sefiraat.equivalencytech.item.builders;
 
-import dev.dbassett.skullcreator.SkullCreator;
+import io.github.sefiraat.equivalencytech.misc.SkullItems;
 import io.github.sefiraat.equivalencytech.EquivalencyTech;
 import io.github.sefiraat.equivalencytech.configuration.ConfigStrings;
 import io.github.sefiraat.equivalencytech.statics.ContainerStorage;
@@ -35,7 +35,7 @@ public class TransmutationOrb {
 
         ConfigStrings c = plugin.getConfigMainClass().getStrings();
 
-        item = SkullCreator. itemFromBase64(SkullTextures.ITEM_TRANSMUTATION_ORB);
+        item = SkullItems.fromBase64(SkullTextures.ITEM_TRANSMUTATION_ORB);
         ItemMeta im = item.getItemMeta();
         im.setDisplayName(Messages.THEME_EMC_PURPLE + c.getItemTransmutationOrbName());
         List<String> lore = new ArrayList<>();

@@ -1,6 +1,6 @@
 package io.github.sefiraat.equivalencytech.gui;
 
-import dev.dbassett.skullcreator.SkullCreator;
+import io.github.sefiraat.equivalencytech.misc.SkullItems;
 import dev.triumphteam.gui.guis.GuiItem;
 import io.github.sefiraat.equivalencytech.EquivalencyTech;
 import io.github.sefiraat.equivalencytech.configuration.ConfigMain;
@@ -25,7 +25,7 @@ public class GUIItems {
     }
 
     public static GuiItem guiOrbInfo(EquivalencyTech plugin, Player player) {
-        GuiItem g = new GuiItem(SkullCreator.itemFromBase64(SkullTextures.GUI_INFO_ALL));
+        GuiItem g = new GuiItem(SkullItems.fromBase64(SkullTextures.GUI_INFO_ALL));
         ItemStack i = g.getItemStack();
         ItemMeta im = i.getItemMeta();
         im.setDisplayName(guiDisplayNameInfo(plugin));
