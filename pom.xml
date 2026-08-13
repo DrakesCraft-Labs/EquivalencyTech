@@ -34,10 +34,7 @@
                             <pattern>co.aikar.locales</pattern>
                             <shadedPattern>io.github.sefiraat.equivalencytech.locales</shadedPattern>
                         </relocation>
-                        <relocation>
-                            <pattern>org.bstats</pattern>
-                            <shadedPattern>io.github.sefiraat.equivalencytech.bstats</shadedPattern>
-                        </relocation>
+                        
                     </relocations>
                 </configuration>
                 <executions>
@@ -161,12 +158,7 @@
             <artifactId>triumph-gui</artifactId>
             <version>3.1.1</version>
         </dependency>
-        <dependency>
-            <groupId>org.bstats</groupId>
-            <artifactId>bstats-bukkit</artifactId>
-            <version>3.0.0</version>
-            <scope>compile</scope>
-        </dependency>
+        
         <dependency>
             <groupId>co.aikar</groupId>
             <artifactId>acf-paper</artifactId>

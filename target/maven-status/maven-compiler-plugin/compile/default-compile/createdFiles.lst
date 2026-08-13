@@ -6,6 +6,7 @@ io/github/sefiraat/equivalencytech/configuration/ConfigMain.class
 io/github/sefiraat/equivalencytech/misc/SlimefunEQAddon.class
 io/github/sefiraat/equivalencytech/item/builders/TransmutationOrb.class
 io/github/sefiraat/equivalencytech/configuration/ConfigEMC.class
+io/github/sefiraat/equivalencytech/misc/SkullItems.class
 io/github/sefiraat/equivalencytech/listeners/BlockPlaceListener.class
 io/github/sefiraat/equivalencytech/statics/SkullTextures.class
 io/github/sefiraat/equivalencytech/gui/GUIItems.class

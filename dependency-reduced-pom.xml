@@ -5,10 +5,16 @@
   <artifactId>EquivalencyTech</artifactId>
   <version>modified</version>
   <build>
+    <resources>
+      <resource>
+        <filtering>true</filtering>
+        <directory>src/main/resources</directory>
+      </resource>
+    </resources>
     <plugins>
       <plugin>
         <artifactId>maven-shade-plugin</artifactId>
-        <version>3.2.4</version>
+        <version>3.6.1</version>
         <executions>
           <execution>
             <phase>package</phase>
@@ -30,10 +36,6 @@
             <relocation>
               <pattern>co.aikar.locales</pattern>
               <shadedPattern>io.github.sefiraat.equivalencytech.locales</shadedPattern>
-            </relocation>
-            <relocation>
-              <pattern>org.bstats</pattern>
-              <shadedPattern>io.github.sefiraat.equivalencytech.bstats</shadedPattern>
             </relocation>
           </relocations>
         </configuration>
@@ -99,10 +101,6 @@
       <url>https://maven.enginehub.org/repo/</url>
     </repository>
     <repository>
-      <id>skullcreator-repo</id>
-      <url>https://github.com/deanveloper/SkullCreator/raw/mvn-repo/</url>
-    </repository>
-    <repository>
       <id>repo</id>
       <url>https://repo.mattstudios.me/artifactory/public/</url>
     </repository>
@@ -115,15 +113,9 @@
       <scope>provided</scope>
     </dependency>
     <dependency>
-      <groupId>org.spigotmc</groupId>
-      <artifactId>spigot-api</artifactId>
-      <version>1.21.1-R0.1-SNAPSHOT</version>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
       <groupId>io.papermc.paper</groupId>
       <artifactId>paper-api</artifactId>
-      <version>1.21.1-R0.1-SNAPSHOT</version>
+      <version>1.21.11-R0.1-SNAPSHOT</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
@@ -134,16 +126,16 @@
     </dependency>
   </dependencies>
   <properties>
-    <maven.compiler.target>1.8</maven.compiler.target>
-    <sonar.projectKey>Sefiraat_EquivalencyTech</sonar.projectKey>
     <sonar.issue.ignore.multicriteria>e1,e2</sonar.issue.ignore.multicriteria>
-    <maven.compiler.source>1.8</maven.compiler.source>
     <sonar.issue.ignore.multicriteria.e2.ruleKey>java:S125</sonar.issue.ignore.multicriteria.e2.ruleKey>
     <sonar.host.url>https://sonarcloud.io</sonar.host.url>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <sonar.organization>sefiraat</sonar.organization>
     <sonar.issue.ignore.multicriteria.e1.resourceKey>**</sonar.issue.ignore.multicriteria.e1.resourceKey>
     <sonar.issue.ignore.multicriteria.e2.resourceKey>**</sonar.issue.ignore.multicriteria.e2.resourceKey>
     <sonar.issue.ignore.multicriteria.e1.ruleKey>java:S6212</sonar.issue.ignore.multicriteria.e1.ruleKey>
+    <maven.compiler.source>21</maven.compiler.source>
+    <sonar.organization>sefiraat</sonar.organization>
+    <maven.compiler.target>21</maven.compiler.target>
+    <sonar.projectKey>Sefiraat_EquivalencyTech</sonar.projectKey>
   </properties>
 </project>

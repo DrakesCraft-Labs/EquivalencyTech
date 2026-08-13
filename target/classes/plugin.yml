@@ -1,8 +1,8 @@
 name: EquivalencyTech
-version: ${project.version}
+version: modified
 main: io.github.sefiraat.equivalencytech.EquivalencyTech
-api-version: 1.16
-softdepend:
+api-version: '1.21'
+depend:
   - Slimefun
 permissions:
   equitech.admin:

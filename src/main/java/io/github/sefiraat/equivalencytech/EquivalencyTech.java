@@ -10,8 +10,6 @@ import io.github.sefiraat.equivalencytech.recipes.EmcDefinitions;
 import io.github.sefiraat.equivalencytech.recipes.Recipes;
 import io.github.sefiraat.equivalencytech.runnables.ManagerRunnables;
 import com.github.drakescraft_labs.slimefun4.libraries.dough.updater.GitHubBuildsUpdater;
-import org.bstats.bukkit.Metrics;
-import org.bstats.charts.SimplePie;
 import org.bukkit.plugin.PluginDescriptionFile;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.plugin.java.JavaPluginLoader;
@@ -103,9 +101,6 @@ public class EquivalencyTech extends JavaPlugin {
 
         if (!isUnitTest) {
             int pluginId = 11527;
-            Metrics metrics = new Metrics(this, pluginId);
-            metrics.addCustomChart(new SimplePie("slimefun", () -> String.valueOf(getManagerSupportedPlugins().isInstalledSlimefun())));
-            metrics.addCustomChart(new SimplePie("emc2", () -> String.valueOf(getManagerSupportedPlugins().isInstalledEMC2())));
         }
 
     }
