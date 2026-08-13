@@ -9,7 +9,6 @@ import io.github.sefiraat.equivalencytech.misc.ManagerSupportedPlugins;
 import io.github.sefiraat.equivalencytech.recipes.EmcDefinitions;
 import io.github.sefiraat.equivalencytech.recipes.Recipes;
 import io.github.sefiraat.equivalencytech.runnables.ManagerRunnables;
-import com.github.drakescraft_labs.slimefun4.libraries.dough.updater.GitHubBuildsUpdater;
 import org.bukkit.plugin.PluginDescriptionFile;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.plugin.java.JavaPluginLoader;
@@ -85,9 +84,13 @@ public class EquivalencyTech extends JavaPlugin {
 
         instance = this;
 
-        if (this.getConfig().getBoolean("auto-update") && this.getDescription().getVersion().startsWith("DEV")) {
-            new GitHubBuildsUpdater(this, this.getFile(), "Sefiraat/EquivalencyTech/master").start();
-        }
+        // Aqui iba el autoactualizador, que se traia el jar del repositorio de upstream.
+        //
+        // Se quita entero en vez de apagarlo por configuracion: este jar esta recompilado contra
+        // el Slimefun repaquetado del servidor, asi que bajarse el de upstream encima dejaria el
+        // addon sin cargar. Hasta ahora lo unico que lo frenaba era que su condicion exige una
+        // version que empiece por "DEV", y la nuestra es "modified" -- una coincidencia que se
+        // rompe el dia que alguien toque la cadena de version.
 
         configMainClass = new ConfigMain(this);
         eqItems = new EQItems(this);
@@ -98,10 +101,6 @@ public class EquivalencyTech extends JavaPlugin {
         managerRunnables = new ManagerRunnables(this);
 
         registerCommands();
-
-        if (!isUnitTest) {
-            int pluginId = 11527;
-        }
 
     }
 
