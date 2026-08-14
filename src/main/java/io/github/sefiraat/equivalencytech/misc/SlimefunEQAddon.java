@@ -21,6 +21,19 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Collections;
 
 
+/*
+ * NOTA SOBRE LAS RECETAS
+ *
+ * Estos objetos declaraban receta de mesa de trabajo vanilla, pero el addon nunca registraba esa
+ * receta en Bukkit: la guia la enseñaba y la mesa no hacia nada. Es lo que reportaron los
+ * jugadores como "los crafteos no andan".
+ *
+ * No se arregla registrando la receta vanilla. Bukkit compara los ingredientes SOLO por material,
+ * y aqui la cadena encadena objetos de Slimefun -- el Carbon 2 se hace con Carbon 1 --, asi que
+ * una receta vanilla aceptaria carbon normal y se saltaria la progresion entera.
+ *
+ * La Mesa de Trabajo Mejorada de Slimefun si compara por identificador, que es lo que hace falta.
+ */
 public class SlimefunEQAddon implements SlimefunAddon {
 
     private final EquivalencyTech plugin;
@@ -42,35 +55,35 @@ public class SlimefunEQAddon implements SlimefunAddon {
         // Items
         // Coal 1
         SlimefunItemStack coal1Stack = new SlimefunItemStack( "EQ_COAL_1", plugin.getEqItems().getAlchemicalCoal().getItemClone());
-        SlimefunItem coal1Item = new EQSlimefunItem(eqCategory, coal1Stack, new RecipeType(MinecraftRecipe.SHAPED_CRAFTING), Recipes.getSFRecipeCoal1());
+        SlimefunItem coal1Item = new EQSlimefunItem(eqCategory, coal1Stack, RecipeType.ENHANCED_CRAFTING_TABLE, Recipes.getSFRecipeCoal1());
         coal1Item.register(this);
         // Coal 2
         SlimefunItemStack coal2Stack = new SlimefunItemStack( "EQ_COAL_2", plugin.getEqItems().getMobiusFuel().getItemClone());
-        SlimefunItem coal2Item = new EQSlimefunItem(eqCategory, coal2Stack, new RecipeType(MinecraftRecipe.SHAPED_CRAFTING), Recipes.getSFRecipeCoal2(coal1Stack));
+        SlimefunItem coal2Item = new EQSlimefunItem(eqCategory, coal2Stack, RecipeType.ENHANCED_CRAFTING_TABLE, Recipes.getSFRecipeCoal2(coal1Stack));
         coal2Item.register(this);
         // Coal 3
         SlimefunItemStack coal3Stack = new SlimefunItemStack( "EQ_COAL_3", plugin.getEqItems().getAeternalisFuel().getItemClone());
-        SlimefunItem coal3Item = new EQSlimefunItem(eqCategory, coal3Stack, new RecipeType(MinecraftRecipe.SHAPED_CRAFTING), Recipes.getSFRecipeCoal3(coal2Stack));
+        SlimefunItem coal3Item = new EQSlimefunItem(eqCategory, coal3Stack, RecipeType.ENHANCED_CRAFTING_TABLE, Recipes.getSFRecipeCoal3(coal2Stack));
         coal3Item.register(this);
         // Dark Matter
         SlimefunItemStack darkStack = new SlimefunItemStack( "EQ_DARK_MATTER", plugin.getEqItems().getDarkMatter().getItemClone());
-        SlimefunItem darkItem = new EQSlimefunItem(eqCategory, darkStack, new RecipeType(MinecraftRecipe.SHAPED_CRAFTING), Recipes.getSFRecipeDarkMatter(coal3Stack));
+        SlimefunItem darkItem = new EQSlimefunItem(eqCategory, darkStack, RecipeType.ENHANCED_CRAFTING_TABLE, Recipes.getSFRecipeDarkMatter(coal3Stack));
         darkItem.register(this);
         // Red Matter
         SlimefunItemStack redStack = new SlimefunItemStack( "EQ_RED_MATTER", plugin.getEqItems().getRedMatter().getItemClone());
-        SlimefunItem redItem = new EQSlimefunItem(eqCategory, redStack, new RecipeType(MinecraftRecipe.SHAPED_CRAFTING), Recipes.getSFRecipeRedMatter(coal3Stack, darkStack));
+        SlimefunItem redItem = new EQSlimefunItem(eqCategory, redStack, RecipeType.ENHANCED_CRAFTING_TABLE, Recipes.getSFRecipeRedMatter(coal3Stack, darkStack));
         redItem.register(this);
         // Transmutation Orb
         SlimefunItemStack orbStack = new SlimefunItemStack( "EQ_T_ORB", plugin.getEqItems().getTransmutationOrb().getItemClone());
-        SlimefunItem orbItem = new EQSlimefunItem(eqCategory, orbStack, new RecipeType(MinecraftRecipe.SHAPED_CRAFTING), Recipes.getSFRecipeTransmutationOrb(darkStack, redStack));
+        SlimefunItem orbItem = new EQSlimefunItem(eqCategory, orbStack, RecipeType.ENHANCED_CRAFTING_TABLE, Recipes.getSFRecipeTransmutationOrb(darkStack, redStack));
         orbItem.register(this);
         // Dissolution Chest
         SlimefunItemStack dChestStack = new SlimefunItemStack( "EQ_D_CHEST", plugin.getEqItems().getDissolutionChest().getItemClone());
-        SlimefunItem dChestItem = new EQSlimefunItem(eqCategory, dChestStack, new RecipeType(MinecraftRecipe.SHAPED_CRAFTING), Recipes.getSFRecipeDissolutionChest(coal2Stack));
+        SlimefunItem dChestItem = new EQSlimefunItem(eqCategory, dChestStack, RecipeType.ENHANCED_CRAFTING_TABLE, Recipes.getSFRecipeDissolutionChest(coal2Stack));
         dChestItem.register(this);
         // Condensator Chest
         SlimefunItemStack cChestStack = new SlimefunItemStack( "EQ_C_CHEST", plugin.getEqItems().getCondensatorChest().getItemClone());
-        SlimefunItem cChestItem = new EQSlimefunItem(eqCategory, cChestStack, new RecipeType(MinecraftRecipe.SHAPED_CRAFTING), Recipes.getSFRecipeCondensatorChest(coal3Stack, dChestStack));
+        SlimefunItem cChestItem = new EQSlimefunItem(eqCategory, cChestStack, RecipeType.ENHANCED_CRAFTING_TABLE, Recipes.getSFRecipeCondensatorChest(coal3Stack, dChestStack));
         cChestItem.register(this);
     }
 
