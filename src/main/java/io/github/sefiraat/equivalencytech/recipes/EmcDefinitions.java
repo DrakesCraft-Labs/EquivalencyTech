@@ -45,12 +45,72 @@ public class EmcDefinitions {
         return emcSlimefun;
     }
 
+    /**
+     * Sólo lo barato. El recorrido de los objetos de Slimefun se hace después de arrancar.
+     *
+     * POR QUE
+     *
+     * fillSlimefun recorre los ~15.000 objetos registrados resolviendo recetas de forma
+     * recursiva. Tarda unos 57 segundos cuando sale bien, y el 14-08-2026 no salió bien: dejó el
+     * servidor tres horas sin terminar de arrancar, sin un solo error en el log. Nada de esto
+     * hace falta para que la gente pueda entrar a jugar.
+     */
     public EmcDefinitions(EquivalencyTech plugin) {
         fillBase(plugin);
         fillSpecialCases();
         fillExtended(plugin);
         fillEQItems(plugin);
-        fillSlimefun(plugin);
+    }
+
+    /**
+     * Calcula el EMC de los objetos de Slimefun repartido entre ticks, ya con el servidor arriba.
+     *
+     * Se hace en el hilo principal y no en uno aparte porque por el camino se consulta el
+     * registro de recetas de Bukkit, que no es seguro tocar desde fuera. Repartirlo en tandas
+     * pequeñas deja el mismo resultado sin que ningún tick se note.
+     *
+     * Mientras termina, un objeto todavía sin calcular se comporta como uno sin valor de EMC,
+     * que es exactamente lo que ya pasaba con los objetos desconocidos.
+     */
+    public void calcularSlimefunPorTandas(EquivalencyTech plugin) {
+        if (!EquivalencyTech.getInstance().getManagerSupportedPlugins().isInstalledSlimefun()) {
+            return;
+        }
+        final java.util.List<SlimefunItem> pendientes = new java.util.ArrayList<>();
+        for (SlimefunItem item : Slimefun.getRegistry().getEnabledSlimefunItems()) {
+            if (item instanceof SlimefunBackpack || !item.getAddon().getName().equals("Slimefun")) {
+                continue;
+            }
+            pendientes.add(item);
+        }
+        plugin.getLogger().info("Calculando EMC de " + pendientes.size()
+                + " objetos de Slimefun en segundo plano...");
+
+        final int porTanda = 25;
+        final long inicio = System.currentTimeMillis();
+        final int[] indice = {0};
+        org.bukkit.Bukkit.getScheduler().runTaskTimer(plugin, tarea -> {
+            int fin = Math.min(indice[0] + porTanda, pendientes.size());
+            for (int i = indice[0]; i < fin; i++) {
+                SlimefunItem item = pendientes.get(i);
+                try {
+                    Double emcValue = getSFEmcValue(plugin, item.getItem(), 1);
+                    if (emcValue != null && emcValue != 0D) {
+                        emcSlimefun.put(item.getId(), roundDown(emcValue, 2));
+                    }
+                } catch (Exception | StackOverflowError e) {
+                    // Un objeto con una receta rara no debe llevarse por delante el resto.
+                    plugin.getLogger().warning("EMC de " + item.getId() + " no se pudo calcular: "
+                            + e.getClass().getSimpleName());
+                }
+            }
+            indice[0] = fin;
+            if (fin >= pendientes.size()) {
+                plugin.getLogger().info("EMC calculado: " + emcSlimefun.size() + " objetos en "
+                        + ((System.currentTimeMillis() - inicio) / 1000) + "s");
+                tarea.cancel();
+            }
+        }, 200L, 1L);
     }
 
     private void fillBase(EquivalencyTech plugin) {
@@ -135,7 +195,23 @@ public class EmcDefinitions {
         }
     }
 
+    /**
+     * Objetos que se están resolviendo ahora mismo, más arriba en la recursión.
+     *
+     * Sin esto, dos objetos cuyas recetas se necesiten mutuamente se llaman el uno al otro sin
+     * fin: el parámetro nestLevel que traía el código sólo servía para indentar el log, no
+     * frenaba nada. Y como sólo se memoriza lo ya terminado, un grafo de recetas en diamante
+     * además se recorre una y otra vez.
+     */
+    private final java.util.Set<String> enCurso = new java.util.HashSet<>();
+
+    /** Tope de profundidad, por si aparece una cadena larguísima sin llegar a ser un ciclo. */
+    private static final int PROFUNDIDAD_MAXIMA = 32;
+
     private Double getSFEmcValue(EquivalencyTech plugin, ItemStack item, Integer nestLevel) {
+        if (nestLevel > PROFUNDIDAD_MAXIMA) {
+            return null;
+        }
         SlimefunItem sfItem = SlimefunItem.getByItem(item);
         if (sfItem == null) { // Vanilla
             DebugLogs.logBoring(plugin, item.getType().toString() + StringUtils.repeat(" >", nestLevel) + " Vanilla - getting found vanilla value");
@@ -162,6 +238,12 @@ public class EmcDefinitions {
             DebugLogs.logBoring(plugin, sfItem.getId() + StringUtils.repeat(" >", nestLevel) + " Not in base and no recipes. Nulling out.");
             return null;
         }
+        // Si este objeto ya se esta resolviendo mas arriba, su receta depende de si mismo. Se
+        // corta devolviendo null en vez de volver a entrar: sin esto la pareja se llama sin fin.
+        if (!enCurso.add(sfItem.getId())) {
+            return null;
+        }
+        try {
         for (ItemStack recipeItem : recipe) {
             if (recipeItem != null) {
                 DebugLogs.logBoring(plugin, sfItem.getId() + StringUtils.repeat(" >", nestLevel) + " Checking recipe item");
@@ -178,6 +260,9 @@ public class EmcDefinitions {
             return null;
         }
         return amount;
+        } finally {
+            enCurso.remove(sfItem.getId());
+        }
     }
 
     @Nullable
