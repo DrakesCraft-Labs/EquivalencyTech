@@ -8,7 +8,7 @@
     <plugins>
       <plugin>
         <artifactId>maven-shade-plugin</artifactId>
-        <version>3.2.3</version>
+        <version>3.2.4</version>
         <executions>
           <execution>
             <phase>package</phase>
@@ -49,12 +49,12 @@
       <plugin>
         <groupId>org.sonarsource.scanner.maven</groupId>
         <artifactId>sonar-maven-plugin</artifactId>
-        <version>3.9.0.2155</version>
+        <version>3.9.1.2184</version>
       </plugin>
       <plugin>
         <groupId>org.jacoco</groupId>
         <artifactId>jacoco-maven-plugin</artifactId>
-        <version>0.8.6</version>
+        <version>0.8.7</version>
         <executions>
           <execution>
             <id>prepare</id>
@@ -74,6 +74,10 @@
     </plugins>
   </build>
   <repositories>
+    <repository>
+      <id>drakescraft-labs-maven</id>
+      <url>https://drakescraft-labs.github.io/maven-repo/</url>
+    </repository>
     <repository>
       <id>spigot-repo</id>
       <url>https://hub.spigotmc.org/nexus/content/repositories/snapshots/</url>
@@ -105,6 +109,12 @@
   </repositories>
   <dependencies>
     <dependency>
+      <groupId>com.github.drakescraft_labs</groupId>
+      <artifactId>slimefun-core</artifactId>
+      <version>11.0-Drake-1.21.11-SNAPSHOT</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
       <groupId>org.spigotmc</groupId>
       <artifactId>spigot-api</artifactId>
       <version>1.17-R0.1-SNAPSHOT</version>
@@ -115,18 +125,6 @@
       <artifactId>paper-api</artifactId>
       <version>1.16.5-R0.1-SNAPSHOT</version>
       <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>com.github.Slimefun</groupId>
-      <artifactId>Slimefun4</artifactId>
-      <version>RC-28</version>
-      <scope>provided</scope>
-      <exclusions>
-        <exclusion>
-          <artifactId>cscorelib2</artifactId>
-          <groupId>io.github.thebusybiscuit</groupId>
-        </exclusion>
-      </exclusions>
     </dependency>
   </dependencies>
   <properties>

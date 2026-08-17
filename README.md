@@ -1,52 +1,44 @@
-<img src="https://github.com/Sefiraat/EquivalencyTech/blob/master/images/wiki/logo_large.png">
+<p align="center">
+  <img src="docs/banner.svg" width="100%" alt="EQUIVALENCYTECH Animated Banner" />
+</p>
 
+# EquivalencyTech
 
-EquivalencyTech (EquiTech) is an attempt to recreate elements of the [ProjectE](https://www.curseforge.com/minecraft/mc-mods/projecte) mod.
+Addon de **Slimefun 4** inspirado en las mecánicas de transmutación y valor de materia (EMC) tipo *ProjectE / EE2*. Permite a los jugadores desintegrar objetos en energía de equivalencia y sintetizar nuevos recursos aprendidos. Portado y optimizado por **DrakesCraft Labs** para Paper/Purpur 1.21.11 en Java 21.
 
-## Download EquivalencyTech
+---
 
-[![Build Status](https://thebusybiscuit.github.io/builds/Sefiraat/EquivalencyTech/master/badge.svg)](https://thebusybiscuit.github.io/builds/Sefiraat/EquivalencyTech/master)
+## 🎯 Objetivo
 
-## Features
-The plugin currently features:
-* EMC!
-  * Turn any unwanted items into EMC
-  * Synthesize your stored EMC into any other item you want!
-  * Server owners have full control over the base EMC values of items
-  * Items that are crafted have their EMC generated based off of these base values (e.g. Diamond = 1000 emc, Diamond Block will automatically be 9000)
-  * Server owners can override this behavior if required by adding the item into the base.
-* Transmutation Orb
-  * This key item lets users input their unwanted items to convert them to EMC.
-  * The first time a new item is added, it is 'learned'.
-  * Learned items can be synthesized using stored EMC.
-* Dissolution Chest
-  * Any items placed/hopped/trasnfered via cargo into this chest will slowly be dissolved into EMC added directly into the players EMC pool
-* Condensate Chest
-  * Shift + Click a Condensate chest with an item to assign it's production type. Assuming the player has enough EMC and the item can be synthesized, the items will begin production.
-* Slimefun
-  * If Slimefun is installed, this plugin's recipes will be added to the Slimefun Guide. **This plugin does not require Slimefun to run**
+Ofrecer una mecánica de reciclaje y sintetización avanzada de materiales para el juego tardío (*endgame*), eliminando el exceso de basura en inventarios y facilitando la producción de recursos equivalentes sin romper la economía del servidor.
 
-## Planned Features
-* Automation Upgrades
-  * Upgrades to MK2 - MK3 chests for faster throughput
-* Slimefun
-  * As at this first release, only vanilla items + EquiTech items can be condensed / synthesized. A Future update will allow for Slimefun core items to also be added.
-* DankTech
-  * The addition of a new type of pack to DankTech that converts voided items into EMC with a % loss
-  * The addition of a new type of pack that builds from assigned slots using EMC.
+---
 
-## Pages
-* **_READ THIS ONE FIRST ->_** [Balancing](https://github.com/Sefiraat/EquivalencyTech/wiki/Balancing) **_<-READ THIS ONE FIRST_**
-* [What is EMC?](https://github.com/Sefiraat/EquivalencyTech/wiki/What-is-EMC%3F)
-* [Transmutation Orb](https://github.com/Sefiraat/EquivalencyTech/wiki/Transmutation-Orb)
-* [Dissolution Chest](https://github.com/Sefiraat/EquivalencyTech/wiki/Dissolution-Chest)
-* [Condensate Chest](https://github.com/Sefiraat/EquivalencyTech/wiki/Condensate-Chest)
-* [Crafting](https://github.com/Sefiraat/EquivalencyTech/wiki/Crafting)
-* [Commands](https://github.com/Sefiraat/EquivalencyTech/wiki/Commands)
+## ⚡ Características Principales
 
+- **Sistema EMC (Equivalent Matter Currency)**:
+  - Asignación de valores de materia base calculados dinámicamente según recetas.
+  - Cálculo en segundo plano (asíncrono) para garantizar cero congelamientos en el arranque del servidor.
+- **Orbe de Transmutación**:
+  - Interfaz de aprendizaje y síntesis donde los jugadores registran objetos consumidos para volver a materializarlos.
+- **Cofres de Disolución y Condensación**:
+  - Automatización para convertir automáticamente flujos de ítems en energía EMC o generar ítems bajo demanda.
+- **Seguridad & Restricciones**:
+  - Bloqueo de recetas infinitas y exploits de duplicación de valor.
 
-## Thanks!
+---
 
-A big thanks to the owners of **mct.tantrum.org** who have tested nearly everything I have made and really given me direction and drive to make these things.
+## 🛠️ Entorno y Compatibilidad
 
-Another big shoutout to **GentlemanCheesy** of **mc.talosmp.net** for being my first (and as of writing this, only!) sponsor. A few coffee's a month to make me feel better about making these addons <3
+- **Servidor**: Paper / Purpur 1.21.11
+- **Java**: 21
+- **Dependencias**:
+  - `Slimefun4-Drake`
+  - `InfinityLib-Drake`
+
+---
+
+## 📜 Créditos y Origen
+
+- **Autor original**: `Sefiraat`
+- **Adaptación y Mantenimiento 1.21.11**: **DrakesCraft Labs**
