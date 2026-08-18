@@ -1,6 +1,16 @@
-<p align="center"><img src="docs/banner.svg" alt="EquivalencyTech banner" width="100%"></p>
+<p align="center"><img src="https://raw.githubusercontent.com/DrakesCraft-Labs/EquivalencyTech/main/banner.svg" alt="EquivalencyTech banner" width="100%"></p>
 
 # EquivalencyTech
+
+> ### 🏰 ¡Únete a la Comunidad Oficial de DrakesCraft!
+> 
+> * 🎮 **IP del Servidor**: `play.drakescraft.net` *(Java 1.21.11 & Bedrock)*
+> * 💬 **Discord Oficial**: [discord.gg/drakescraft](https://discord.gg/rR7FbfCt9Y)
+> * 🌐 **Web & Guía**: [drakescraft.net](https://drakescraft.net) — 🛒 **Tienda**: [tienda.drakescraft.net](https://tienda.drakescraft.net)
+> 
+> *¡Juega con este addon y más de 80 expansiones optimizadas en vivo en nuestra network de supervivencia técnica!*
+
+---
 
 EMC-based matter transmutation for the DrakesCraft Slimefun ecosystem. Players learn item
 values, store EMC and convert resources through a deliberate progression path.
