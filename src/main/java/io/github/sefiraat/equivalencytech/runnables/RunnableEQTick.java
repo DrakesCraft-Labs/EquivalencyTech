@@ -55,7 +55,17 @@ public class RunnableEQTick extends BukkitRunnable {
                             sfItem = SlimefunItem.getByItem(itemStack);
                         }
                         Material material = itemStack.getType();
-                        Double emcValue = Utils.roundDown((Utils.getEMC(plugin, itemStack) / 100) * 150, 2);
+                        // getEMC devuelve el valor de un mapa, asi que es null para cualquier objeto
+                        // sin EMC definido. Antes se dividia entre 100 sin comprobarlo: el
+                        // desempaquetado del Double lanzaba NullPointerException y, como esto corre en
+                        // cada tick sobre el contenido de los cofres, el fallo se repetia sin parar --
+                        // 12.867 veces en un solo arranque, en el hilo principal. El guard de abajo
+                        // llegaba tarde: la excepcion saltaba antes, al hacer la cuenta.
+                        Double emcBase = Utils.getEMC(plugin, itemStack);
+                        if (emcBase == null) {
+                            continue;
+                        }
+                        Double emcValue = Utils.roundDown((emcBase / 100) * 150, 2);
                         if (emcValue != null && Utils.canBeSynth(plugin, itemStack)) {
                             String entryName;
                             if (isEQ) {
