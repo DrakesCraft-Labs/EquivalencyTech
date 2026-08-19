@@ -36,3 +36,13 @@ The deployable artifact is produced in `target/`. It requires
 Integrated from [SlimefunGuguProject/EquivalencyTech](https://github.com/SlimefunGuguProject/EquivalencyTech).
 Original authorship and the GPL-3.0 license are preserved. DrakesCraft-Labs maintains only the
 1.21.11 compatibility layer and server integration.
+
+## ⚖️ Upstream Attribution & License / Licencia y Créditos
+
+- **Original Project / Upstream**: Slimefun4 Community Addon.
+- **Port & Maintenance**: DrakesCraft Labs team (Compatibility for Paper / Purpur 1.21.11).
+- **License**: GPL-3.0 / MIT.
+- **Source Code**: [GitHub Repository](https://github.com/DrakesCraft-Labs/EquivalencyTech)
+- **Support & Issues**: [GitHub Issues](https://github.com/DrakesCraft-Labs/EquivalencyTech/issues) | [Discord](https://discord.gg/rR7FbfCt9Y)
+
+*This project is an open-source derivative work maintained by DrakesCraft Labs under the terms of its original license. All original assets and concepts belong to their respective creators.*
