@@ -1,11 +1,10 @@
 package io.github.sefiraat.equivalencytech.gui;
 
-import io.github.sefiraat.equivalencytech.misc.SkullItems;
-import dev.triumphteam.gui.guis.GuiItem;
 import io.github.sefiraat.equivalencytech.EquivalencyTech;
 import io.github.sefiraat.equivalencytech.configuration.ConfigMain;
 import io.github.sefiraat.equivalencytech.configuration.ConfigStrings;
 import io.github.sefiraat.equivalencytech.misc.Utils;
+import io.github.sefiraat.equivalencytech.misc.SkullItems;
 import io.github.sefiraat.equivalencytech.statics.Messages;
 import io.github.sefiraat.equivalencytech.statics.SkullTextures;
 import net.md_5.bungee.api.ChatColor;
@@ -24,46 +23,35 @@ public class GUIItems {
         throw new IllegalStateException("Utility class");
     }
 
-    public static GuiItem guiOrbInfo(EquivalencyTech plugin, Player player) {
-        GuiItem g = new GuiItem(SkullItems.fromBase64(SkullTextures.GUI_INFO_ALL));
-        ItemStack i = g.getItemStack();
+    public static ItemStack guiOrbInfo(EquivalencyTech plugin, Player player) {
+        ItemStack i = SkullItems.fromBase64(SkullTextures.GUI_INFO_ALL);
         ItemMeta im = i.getItemMeta();
         im.setDisplayName(guiDisplayNameInfo(plugin));
         im.addItemFlags(ItemFlag.HIDE_ENCHANTS);
         im.setLore(guiDisplayLoreInfo(plugin, player));
         i.setItemMeta(im);
-        g.setItemStack(i);
-        g.setAction(event -> event.setCancelled(true));
-        return g;
+        return i;
     }
 
-    public static GuiItem guiOrbBorder(EquivalencyTech plugin) {
-        GuiItem g = new GuiItem(Material.GRAY_STAINED_GLASS_PANE);
-        ItemStack i = g.getItemStack();
+    public static ItemStack guiOrbBorder(EquivalencyTech plugin) {
+        ItemStack i = new ItemStack(Material.GRAY_STAINED_GLASS_PANE);
         ItemMeta im = i.getItemMeta();
         im.setDisplayName(Messages.THEME_PASSIVE_GRAY + plugin.getConfigMainClass().getStrings().getGuiBorderName());
         im.addItemFlags(ItemFlag.HIDE_ENCHANTS);
         i.setItemMeta(im);
-        g.setItemStack(i);
-        g.setAction(event -> event.setCancelled(true));
-        return g;
+        return i;
     }
 
-    public static GuiItem guiOrbFiller(EquivalencyTech plugin) {
-        GuiItem g = new GuiItem(Material.LIGHT_GRAY_STAINED_GLASS_PANE);
-        ItemStack i = g.getItemStack();
+    public static ItemStack guiOrbFiller(EquivalencyTech plugin) {
+        ItemStack i = new ItemStack(Material.LIGHT_GRAY_STAINED_GLASS_PANE);
         ItemMeta im = i.getItemMeta();
         im.setDisplayName(Messages.THEME_PASSIVE_GRAY + plugin.getConfigMainClass().getStrings().getGuiFillerName());
         im.addItemFlags(ItemFlag.HIDE_ENCHANTS);
         i.setItemMeta(im);
-        g.setItemStack(i);
-        g.setAction(event -> event.setCancelled(true));
-        return g;
+        return i;
     }
 
-    public static GuiItem guiEMCItem(EquivalencyTech plugin, ItemStack itemStack, boolean isVanilla) {
-
-        GuiItem g = new GuiItem(itemStack);
+    public static ItemStack guiEMCItem(EquivalencyTech plugin, ItemStack itemStack, boolean isVanilla) {
         ItemMeta im = itemStack.getItemMeta();
 
         if (isVanilla) {
@@ -76,8 +64,7 @@ public class GUIItems {
 
         im.setLore(getEmcItemLore(plugin, itemStack));
         itemStack.setItemMeta(im);
-        g.setItemStack(itemStack);
-        return g;
+        return itemStack;
     }
 
     public static List<String> getEmcItemLore(EquivalencyTech plugin, ItemStack itemStack) {

@@ -15,8 +15,8 @@ io/github/sefiraat/equivalencytech/commands/Commands$Emc.class
 io/github/sefiraat/equivalencytech/runnables/RunnableSave.class
 io/github/sefiraat/equivalencytech/runnables/RunnableEQTick.class
 io/github/sefiraat/equivalencytech/listeners/PlayerJoinListener.class
-io/github/sefiraat/equivalencytech/recipes/Recipes.class
 io/github/sefiraat/equivalencytech/listeners/CraftListener.class
+io/github/sefiraat/equivalencytech/recipes/Recipes.class
 io/github/sefiraat/equivalencytech/gui/GuiTransmutationOrb.class
 io/github/sefiraat/equivalencytech/item/builders/MobiusFuel.class
 io/github/sefiraat/equivalencytech/recipes/EmcDefinitions.class
@@ -24,15 +24,14 @@ io/github/sefiraat/equivalencytech/item/EQSlimefunItem.class
 io/github/sefiraat/equivalencytech/statics/ContainerStorage.class
 io/github/sefiraat/equivalencytech/commands/Commands$GiveItem.class
 io/github/sefiraat/equivalencytech/misc/ManagerSupportedPlugins.class
-io/github/sefiraat/equivalencytech/gui/GuiTransmutationOrb$1.class
 io/github/sefiraat/equivalencytech/misc/Utils.class
 io/github/sefiraat/equivalencytech/item/builders/AeternalisFuel.class
 io/github/sefiraat/equivalencytech/item/builders/DarkMatter.class
 io/github/sefiraat/equivalencytech/item/builders/CondensatorChest.class
 io/github/sefiraat/equivalencytech/configuration/ConfigBooleans.class
 io/github/sefiraat/equivalencytech/statics/Messages.class
-io/github/sefiraat/equivalencytech/listeners/ChestPlaceListener.class
 io/github/sefiraat/equivalencytech/listeners/OrbOpenListener.class
+io/github/sefiraat/equivalencytech/listeners/ChestPlaceListener.class
 io/github/sefiraat/equivalencytech/item/builders/DissolutionChest.class
 io/github/sefiraat/equivalencytech/item/builders/RedMatter.class
 io/github/sefiraat/equivalencytech/item/EQItems.class

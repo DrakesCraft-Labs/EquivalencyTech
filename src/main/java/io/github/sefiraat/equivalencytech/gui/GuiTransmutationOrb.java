@@ -1,301 +1,279 @@
 package io.github.sefiraat.equivalencytech.gui;
 
-import dev.triumphteam.gui.builder.item.ItemBuilder;
-import dev.triumphteam.gui.guis.GuiItem;
-import dev.triumphteam.gui.guis.PaginatedGui;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+import javax.annotation.Nonnull;
+
+import com.github.drakescraft_labs.slimefun4.api.items.SlimefunItem;
 import io.github.sefiraat.equivalencytech.EquivalencyTech;
 import io.github.sefiraat.equivalencytech.configuration.ConfigMain;
 import io.github.sefiraat.equivalencytech.misc.Utils;
 import io.github.sefiraat.equivalencytech.statics.ContainerStorage;
 import io.github.sefiraat.equivalencytech.statics.Messages;
-import com.github.drakescraft_labs.slimefun4.api.items.SlimefunItem;
+import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
-import org.bukkit.event.inventory.InventoryAction;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
-import org.jetbrains.annotations.NotNull;
+import org.bukkit.inventory.meta.ItemMeta;
 
-import java.util.Arrays;
-import java.util.List;
+/**
+ * Inventario nativo del orbe de transmutacion.
+ *
+ * <p>TriumphGUI 3.x inicializa reflexion contra campos eliminados de
+ * CraftMetaItem en Paper 1.21.11. Esta implementacion conserva la mecanica y la
+ * distribucion originales sin depender de internals de CraftBukkit.</p>
+ */
+public final class GuiTransmutationOrb implements InventoryHolder {
 
-public class GuiTransmutationOrb extends PaginatedGui {
+    private static final int INVENTORY_SIZE = 54;
+    private static final int PAGE_SIZE = 36;
+    private static final int INFO_SLOT = 4;
+    private static final int BACK_SLOT = 46;
+    private static final int INPUT_SLOT = 49;
+    private static final int FORWARD_SLOT = 52;
+    private static final List<Integer> BORDER_SLOTS = Arrays.asList(
+        0, 1, 2, 3, 5, 6, 7, 8, 45, 47, 48, 50, 51, 53
+    );
 
-    public final EquivalencyTech plugin;
-    public final Player player;
+    private final EquivalencyTech plugin;
+    private final Player player;
+    private final Inventory inventory;
+    private int page;
 
-    protected static final List<Integer> ARRAY_FILLER_SLOTS = Arrays.asList(0, 1, 2, 3, 5, 6, 7, 8, 45, 47, 48, 50, 51, 53);
-    protected static final Integer INFO_SLOT = 4;
-    protected static final Integer INPUT_SLOT = 49;
-    protected static final Integer PAGE_SIZE = 36;
-
-    public GuiTransmutationOrb(int rows, int pageSize, @NotNull String title, EquivalencyTech plugin, Player player) {
-        super(rows, pageSize, title);
+    private GuiTransmutationOrb(EquivalencyTech plugin, Player player) {
         this.plugin = plugin;
         this.player = player;
+        String title = Messages.THEME_EMC_PURPLE
+            + plugin.getConfigMainClass().getStrings().getItemTransmutationOrbName();
+        this.inventory = Bukkit.createInventory(this, INVENTORY_SIZE, title);
+        render();
     }
 
     public static GuiTransmutationOrb buildGui(EquivalencyTech plugin, Player player) {
+        return new GuiTransmutationOrb(plugin, player);
+    }
 
-        int backSlot = 46;
-        int forwardSlot = 52;
+    public void open(Player target) {
+        target.openInventory(inventory);
+    }
 
-        GuiTransmutationOrb gui = new GuiTransmutationOrb(
-                6,
-                GuiTransmutationOrb.PAGE_SIZE,
-                Messages.THEME_EMC_PURPLE + plugin.getConfigMainClass().getStrings().getItemTransmutationOrbName(),
-                plugin,
-                player
-        );
+    @Override
+    @Nonnull
+    public Inventory getInventory() {
+        return inventory;
+    }
 
-        gui.setItem(GuiTransmutationOrb.ARRAY_FILLER_SLOTS, GUIItems.guiOrbBorder(plugin));
-        gui.setItem(GuiTransmutationOrb.INFO_SLOT, GUIItems.guiOrbInfo(plugin, player));
+    /** Redibuja una pagina completa y evita conservar botones u objetos viejos. */
+    private void render() {
+        inventory.clear();
+        ItemStack border = GUIItems.guiOrbBorder(plugin);
+        for (int slot : BORDER_SLOTS) {
+            inventory.setItem(slot, border);
+        }
+        inventory.setItem(INFO_SLOT, GUIItems.guiOrbInfo(plugin, player));
+        inventory.setItem(BACK_SLOT, navigationItem("Previous"));
+        inventory.setItem(FORWARD_SLOT, navigationItem("Next"));
 
-        List<String> learnedItems = ConfigMain.getLearnedItems(plugin, player.getUniqueId().toString());
+        List<ItemStack> learnedItems = getLearnedItems();
+        int maxPage = maxPage(learnedItems.size());
+        page = Math.max(0, Math.min(page, maxPage));
+        int start = page * PAGE_SIZE;
+        for (int offset = 0; offset < PAGE_SIZE; offset++) {
+            int itemIndex = start + offset;
+            ItemStack item = itemIndex < learnedItems.size()
+                ? learnedItems.get(itemIndex)
+                : GUIItems.guiOrbFiller(plugin);
+            inventory.setItem(9 + offset, item);
+        }
+    }
 
-        int leftOverSlots = GuiTransmutationOrb.PAGE_SIZE - (learnedItems.size() % GuiTransmutationOrb.PAGE_SIZE);
-
-        for (String s : learnedItems) {
-
-            ItemStack itemStack;
-            GuiItem guiItem;
-            boolean isVanilla = false;
-
-            SlimefunItem sfItem = null;
-            if (EquivalencyTech.getInstance().getManagerSupportedPlugins().isInstalledSlimefun()) {
-                sfItem = SlimefunItem.getById(s);
-            }
-
-            if (!plugin.getEqItems().getEqItemMap().containsKey(s) && sfItem == null) {
-                isVanilla = true;
-            }
-
-            if (isVanilla) {
-                itemStack = new ItemStack(Material.valueOf(s));
-            } else if (sfItem != null) {
-                itemStack = sfItem.getItem().clone();
-            } else {
-                itemStack = plugin.getEqItems().getEqItemMap().get(s).clone();
-            }
-
-            if (Utils.getEMC(plugin, itemStack) == null) {
-                // A learned item has null emc - likely removed from the config post go live - skip
-                leftOverSlots += 1;
+    /** Convierte los identificadores aprendidos en copias seguras para la GUI. */
+    private List<ItemStack> getLearnedItems() {
+        List<ItemStack> items = new ArrayList<>();
+        for (String id : ConfigMain.getLearnedItems(plugin, player.getUniqueId().toString())) {
+            ItemStack item = resolveLearnedItem(id);
+            if (item == null || Utils.getEMC(plugin, item) == null) {
                 continue;
             }
+            boolean vanilla = plugin.getEqItems().getEqItemMap().get(id) == null
+                && SlimefunItem.getById(id) == null;
+            items.add(GUIItems.guiEMCItem(plugin, item, vanilla));
+        }
+        return items;
+    }
 
-            guiItem = GUIItems.guiEMCItem(plugin, itemStack, isVanilla);
-
-            guiItem.setAction(event -> emcItemClicked(event, plugin));
-            gui.addItem(guiItem);
+    private ItemStack resolveLearnedItem(String id) {
+        SlimefunItem slimefunItem = null;
+        if (plugin.getManagerSupportedPlugins().isInstalledSlimefun()) {
+            slimefunItem = SlimefunItem.getById(id);
+        }
+        if (slimefunItem != null) {
+            return slimefunItem.getItem().clone();
         }
 
-
-        for (int i = 0; i < leftOverSlots; i++) {
-            gui.addItem(GUIItems.guiOrbFiller(plugin));
+        ItemStack equivalencyItem = plugin.getEqItems().getEqItemMap().get(id);
+        if (equivalencyItem != null) {
+            return equivalencyItem.clone();
         }
 
-        setInputSlot(plugin, gui);
+        Material material = Material.matchMaterial(id);
+        return material == null ? null : new ItemStack(material);
+    }
 
-        gui.setItem(backSlot, ItemBuilder.from(Material.PAPER).setName("Previous").asGuiItem(event -> {
+    private static int maxPage(int itemCount) {
+        return Math.max(0, (itemCount - 1) / PAGE_SIZE);
+    }
+
+    private static ItemStack navigationItem(String name) {
+        ItemStack item = new ItemStack(Material.PAPER);
+        ItemMeta meta = item.getItemMeta();
+        meta.setDisplayName(name);
+        item.setItemMeta(meta);
+        return item;
+    }
+
+    /** Procesa solamente clics pertenecientes a este inventario. */
+    public void handleClick(InventoryClickEvent event) {
+        if (!(event.getWhoClicked() instanceof Player clickingPlayer)
+            || !clickingPlayer.getUniqueId().equals(player.getUniqueId())) {
             event.setCancelled(true);
-            gui.previous();
-        }));
+            return;
+        }
 
-        gui.setItem(forwardSlot, ItemBuilder.from(Material.PAPER).setName("Next").asGuiItem(event -> {
+        int rawSlot = event.getRawSlot();
+        if (rawSlot >= 0 && rawSlot < INVENTORY_SIZE) {
             event.setCancelled(true);
-            gui.next();
-        }));
-
-        gui.setDragAction(event -> event.setCancelled(true));
-        gui.setDefaultClickAction(event -> {
-            if (event.isShiftClick()) {
-                if (event.getAction() == InventoryAction.MOVE_TO_OTHER_INVENTORY && !event.getClickedInventory().equals(event.getInventory())) {
-                    inputItemAction(event, plugin, gui, true);
-                }
-                event.setCancelled(true);
+            if (rawSlot == BACK_SLOT && page > 0) {
+                page--;
+                render();
+            } else if (rawSlot == FORWARD_SLOT && page < maxPage(getLearnedItems().size())) {
+                page++;
+                render();
+            } else if (rawSlot == INPUT_SLOT) {
+                inputItemAction(event, false);
+            } else if (rawSlot >= 9 && rawSlot < 45) {
+                emcItemClicked(event);
             }
-        });
+            return;
+        }
 
-        return gui;
-
-    }
-
-    private static void setInputSlot(EquivalencyTech plugin, GuiTransmutationOrb gui) {
-        gui.addSlotAction(GuiTransmutationOrb.INPUT_SLOT, event -> {
-            inputItemAction(event, plugin, gui, false);
+        // Shift-click desde el inventario del jugador alimenta el orbe igual
+        // que en la GUI anterior, pero no permite que Bukkit mueva el stack.
+        if (event.isShiftClick()) {
             event.setCancelled(true);
-        });
+            inputItemAction(event, true);
+        }
     }
 
-    private static void inputItemAction(InventoryClickEvent e, EquivalencyTech plugin, PaginatedGui gui, boolean shifted) {
-
-        Player player = (Player) e.getWhoClicked();
-        ItemStack itemStack;
-
-        if (shifted) {
-            itemStack = e.getCurrentItem();
-        } else {
-            itemStack = player.getItemOnCursor();
+    private void inputItemAction(InventoryClickEvent event, boolean shifted) {
+        ItemStack itemStack = shifted ? event.getCurrentItem() : player.getItemOnCursor();
+        if (itemStack == null || itemStack.getType().isAir()) {
+            return;
         }
 
-        boolean isEQ = ContainerStorage.isCraftable(itemStack, plugin);
-        SlimefunItem sfItem = null;
-        if (EquivalencyTech.getInstance().getManagerSupportedPlugins().isInstalledSlimefun()) {
-            sfItem = SlimefunItem.getByItem(itemStack);
-        }
-
-        if (itemStack.hasItemMeta() && !isEQ && sfItem == null) {
+        boolean equivalencyItem = ContainerStorage.isCraftable(itemStack, plugin);
+        SlimefunItem slimefunItem = plugin.getManagerSupportedPlugins().isInstalledSlimefun()
+            ? SlimefunItem.getByItem(itemStack)
+            : null;
+        if (itemStack.hasItemMeta() && !equivalencyItem && slimefunItem == null) {
             player.sendMessage(Messages.messageGuiItemMeta(plugin));
             return;
         }
 
-        Material material = itemStack.getType();
         Double emcValue = Utils.getEMC(plugin, itemStack);
-
-        boolean mustClose = false;
-        if (emcValue != null) {
-            double totalEmc = emcValue * itemStack.getAmount();
-            String entryName;
-            if (isEQ) {
-                entryName = Utils.eqNameConfig(itemStack.getItemMeta().getDisplayName());
-            } else if (sfItem != null) {
-                entryName = sfItem.getId();
-            } else {
-                entryName = material.toString();
-            }
-            if (!ConfigMain.getLearnedItems(plugin, player.getUniqueId().toString()).contains(entryName)) {
-                ConfigMain.addLearnedItem(plugin, player.getUniqueId().toString(), entryName);
-                player.sendMessage(Messages.messageGuiItemLearned(plugin));
-                mustClose = true;
-            }
-            ConfigMain.addPlayerEmc(plugin, player, emcValue, totalEmc, itemStack.getAmount());
-            itemStack.setAmount(0);
-        } else {
+        if (emcValue == null) {
             player.sendMessage(Messages.msgCmdEmcNone(plugin));
+            return;
         }
-        if (mustClose) {
-            gui.close(player);
+
+        String entryName = itemEntryName(itemStack, equivalencyItem, slimefunItem);
+        boolean learned = ConfigMain.getLearnedItems(plugin, player.getUniqueId().toString()).contains(entryName);
+        if (!learned) {
+            ConfigMain.addLearnedItem(plugin, player.getUniqueId().toString(), entryName);
+            player.sendMessage(Messages.messageGuiItemLearned(plugin));
+        }
+        ConfigMain.addPlayerEmc(plugin, player, emcValue, emcValue * itemStack.getAmount(), itemStack.getAmount());
+        itemStack.setAmount(0);
+
+        if (!learned) {
+            player.closeInventory();
+        } else {
+            render();
         }
     }
 
-    private static void emcItemClicked(InventoryClickEvent e, EquivalencyTech plugin) {
-        e.setCancelled(true);
-        switch (e.getClick()) {
-            case LEFT:
-                emcWithdrawOne(e, plugin);
-                break;
-            case RIGHT:
-                emcWithdrawStack(e, plugin);
-                break;
-            default:
-                break;
+    private void emcItemClicked(InventoryClickEvent event) {
+        ItemStack clickedItem = event.getCurrentItem();
+        if (clickedItem == null || clickedItem.getType().isAir()
+            || clickedItem.getType() == Material.LIGHT_GRAY_STAINED_GLASS_PANE) {
+            return;
+        }
+        if (event.isLeftClick()) {
+            withdraw(clickedItem, 1);
+        } else if (event.isRightClick()) {
+            withdraw(clickedItem, clickedItem.getMaxStackSize());
         }
     }
 
-    private static void emcWithdrawOne(InventoryClickEvent e, EquivalencyTech plugin) {
-
-        Player player = (Player) e.getWhoClicked();
-
+    /** Retira hasta requestedAmount sin crear objetos cuando no hay EMC o espacio. */
+    private void withdraw(ItemStack clickedItem, int requestedAmount) {
         if (player.getInventory().firstEmpty() == -1) {
             player.sendMessage(Messages.messageGuiNoSpace(plugin));
             return;
         }
 
-        ItemStack clickedItem = e.getCurrentItem();
-        boolean isEQ = ContainerStorage.isCraftable(clickedItem, plugin);
-        SlimefunItem sfItem = null;
-        if (EquivalencyTech.getInstance().getManagerSupportedPlugins().isInstalledSlimefun()) {
-            sfItem = SlimefunItem.getByItem(clickedItem);
-        }
-        double playerEmc = ConfigMain.getPlayerEmc(plugin, player);
-        Double emcValue = Utils.getEMC(plugin, clickedItem);
-        String itemName;
-
-        if (isEQ) {
-            itemName = Utils.eqNameConfig(clickedItem.getItemMeta().getDisplayName());
-        } else if (sfItem != null) {
-            itemName = sfItem.getId();
-        } else {
-            itemName = clickedItem.getType().toString();
+        Double unitEmc = Utils.getEMC(plugin, clickedItem);
+        if (unitEmc == null || unitEmc <= 0) {
+            player.sendMessage(Messages.msgCmdEmcNone(plugin));
+            return;
         }
 
-        if (playerEmc >= emcValue) {
-            ItemStack itemStack;
-            if (isEQ) {
-                itemStack = plugin.getEqItems().getEqItemMap().get(itemName).clone();
-            } else if (sfItem != null) {
-                itemStack = sfItem.getItem().clone();
-            } else {
-                itemStack = new ItemStack(e.getCurrentItem().getType());
-            }
-            player.getInventory().addItem(itemStack);
-            ConfigMain.removePlayerEmc(plugin, player, emcValue);
-            player.sendMessage(Messages.messageGuiEmcRemoved(plugin, player, emcValue, emcValue, 1));
-        } else {
+        int affordable = (int) Math.floor(ConfigMain.getPlayerEmc(plugin, player) / unitEmc);
+        int amount = Math.min(requestedAmount, affordable);
+        if (amount <= 0) {
             player.sendMessage(Messages.messageGuiEmcNotEnough(plugin, player));
-        }
-    }
-
-    private static void emcWithdrawStack(InventoryClickEvent e, EquivalencyTech plugin) {
-
-        Player player = (Player) e.getWhoClicked();
-        double playerEmc = ConfigMain.getPlayerEmc(plugin, player);
-        ItemStack clickedItem = e.getCurrentItem();
-        Material material = clickedItem.getType();
-
-        boolean isEQ = ContainerStorage.isCraftable(e.getCurrentItem(), plugin);
-        SlimefunItem sfItem = null;
-        if (EquivalencyTech.getInstance().getManagerSupportedPlugins().isInstalledSlimefun()) {
-            sfItem = SlimefunItem.getByItem(clickedItem);
+            return;
         }
 
-        String itemName;
-        Double emcValue = Utils.getEMC(plugin, clickedItem);
-
-        if (isEQ) {
-            itemName = Utils.eqNameConfig(e.getCurrentItem().getItemMeta().getDisplayName());
-        } else if (sfItem != null) {
-            itemName = sfItem.getId();
+        boolean equivalencyItem = ContainerStorage.isCraftable(clickedItem, plugin);
+        SlimefunItem slimefunItem = plugin.getManagerSupportedPlugins().isInstalledSlimefun()
+            ? SlimefunItem.getByItem(clickedItem)
+            : null;
+        String itemName = itemEntryName(clickedItem, equivalencyItem, slimefunItem);
+        ItemStack output;
+        if (equivalencyItem) {
+            ItemStack configured = plugin.getEqItems().getEqItemMap().get(itemName);
+            if (configured == null) {
+                player.sendMessage(Messages.msgCmdEmcNone(plugin));
+                return;
+            }
+            output = configured.clone();
+        } else if (slimefunItem != null) {
+            output = slimefunItem.getItem().clone();
         } else {
-            itemName = material.toString();
+            output = new ItemStack(clickedItem.getType());
         }
 
-        int amount = clickedItem.getMaxStackSize();
-        if (emcValue != null) {
-            double emcValueStack = emcValue * amount;
-            if (player.getInventory().firstEmpty() == -1) {
-                player.sendMessage(Messages.messageGuiNoSpace(plugin));
-                return;
-            }
-            if (playerEmc < emcValueStack) {
-                double maxPossible = playerEmc / emcValue;
-                maxPossible = Math.floor(maxPossible);
-                amount = (int) maxPossible;
-                emcValueStack = emcValue * amount;
-            }
-            if (amount == 0) {
-                player.sendMessage(Messages.messageGuiEmcNotEnough(plugin, player));
-                return;
-            }
-
-            ItemStack itemStack;
-            if (isEQ) {
-                itemStack = plugin.getEqItems().getEqItemMap().get(itemName).clone();
-            } else if (sfItem != null) {
-                itemStack = sfItem.getItem().clone();
-            } else {
-                itemStack = new ItemStack(e.getCurrentItem().getType());
-            }
-
-            itemStack.setAmount(amount);
-            player.getInventory().addItem(itemStack);
-            ConfigMain.removePlayerEmc(plugin, player, emcValueStack);
-            player.sendMessage(Messages.messageGuiEmcRemoved(plugin, player, emcValue, emcValueStack, amount));
-        }
+        output.setAmount(amount);
+        player.getInventory().addItem(output);
+        double totalEmc = unitEmc * amount;
+        ConfigMain.removePlayerEmc(plugin, player, totalEmc);
+        player.sendMessage(Messages.messageGuiEmcRemoved(plugin, player, unitEmc, totalEmc, amount));
+        render();
     }
 
-
-
+    private static String itemEntryName(ItemStack itemStack, boolean equivalencyItem, SlimefunItem slimefunItem) {
+        if (equivalencyItem) {
+            return Utils.eqNameConfig(itemStack.getItemMeta().getDisplayName());
+        }
+        if (slimefunItem != null) {
+            return slimefunItem.getId();
+        }
+        return itemStack.getType().toString();
+    }
 }
-

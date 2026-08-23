@@ -23,10 +23,6 @@
                 <configuration>
                     <relocations>
                         <relocation>
-                            <pattern>dev.triumphteam.gui</pattern>
-                            <shadedPattern>io.github.sefiraat.equivalencytech.mfgui</shadedPattern>
-                        </relocation>
-                        <relocation>
                             <pattern>co.aikar.commands</pattern>
                             <shadedPattern>io.github.sefiraat.equivalencytech.acf</shadedPattern>
                         </relocation>
@@ -153,12 +149,6 @@
             <version>1.21.11-R0.1-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
-        <dependency>
-            <groupId>dev.triumphteam</groupId>
-            <artifactId>triumph-gui</artifactId>
-            <version>3.1.1</version>
-        </dependency>
-        
         <dependency>
             <groupId>co.aikar</groupId>
             <artifactId>acf-paper</artifactId>
