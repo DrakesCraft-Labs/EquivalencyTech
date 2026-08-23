@@ -117,6 +117,10 @@ public class EquivalencyTech extends JavaPlugin {
 
     private void registerCommands() {
         commandManager = new PaperCommandManager(this);
+        // ACF 0.5 intenta leer por reflexión el antiguo campo CraftPlayer.locale, eliminado en
+        // Paper 1.21. La interfaz del addon no necesita detectar idiomas por jugador, así que se
+        // fija el locale del servidor y se evita un stack trace en cada conexión.
+        commandManager.usePerIssuerLocale(false, false);
         commandManager.registerCommand(new Commands(this));
     }
 
