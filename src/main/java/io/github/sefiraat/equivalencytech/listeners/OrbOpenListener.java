@@ -31,6 +31,21 @@ public class OrbOpenListener implements Listener {
             ItemStack i = e.getItem();
             if (ContainerStorage.isTransmutationOrb(i, plugin)) {
                 e.setCancelled(true);
+
+                // El EMC y los items aprendidos se guardan por jugador y valen en todas las
+                // modalidades. En un mundo donde los items se consiguen gratis, el orbe los
+                // convierte en EMC que despues se gasta en la modalidad normal, asi que ahi no
+                // se abre. La lista vive en config porque manana puede haber otro mundo
+                // creativo y no deberia hacer falta recompilar para cubrirlo.
+                if (plugin.getConfig().getStringList("BLOCKED_WORLDS")
+                        .contains(player.getWorld().getName())) {
+                    String aviso = plugin.getConfig().getString("MESSAGES.ORB_WORLD_BLOCKED");
+                    if (aviso != null && !aviso.isBlank()) {
+                        player.sendMessage(aviso);
+                    }
+                    return;
+                }
+
                 GuiTransmutationOrb gui = GuiTransmutationOrb.buildGui(plugin, player);
                 gui.open(player);
             }

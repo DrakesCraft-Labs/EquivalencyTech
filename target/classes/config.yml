@@ -296,6 +296,7 @@ ITEMS:
 GUI:
   SLOT_BORDER_NAME: "EquiTech"
   SLOT_FILLER_NAME: "No recipe here"
+  ORB_WORLD_BLOCKED: "&cEl orbe no funciona en esta modalidad."
   ORB_ITEM_ADDED: "You have learned how to synthesize a new item!"
   EMC_ITEM_WITHDRAW_ONE: "Synthesize 1"
   EMC_ITEM_WITHDRAW_STACK: "Synthesize Stack"
@@ -305,3 +306,9 @@ GUI:
   EMC_ITEM_META: "Only basic items can be condensed (No enchants, names etc.)"
 DEBUG:
   SHOW_DEBUGGING_LOGS: false
+
+# Mundos donde no se puede abrir el Transmutation Orb.
+# El EMC y los items aprendidos se guardan por jugador y valen en todas las modalidades, asi que
+# un mundo donde los items son gratis convierte el orbe en una fuente infinita para el resto.
+BLOCKED_WORLDS:
+  - laboratorio
