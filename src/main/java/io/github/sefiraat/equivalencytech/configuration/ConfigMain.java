@@ -3,6 +3,7 @@ package io.github.sefiraat.equivalencytech.configuration;
 import io.github.sefiraat.equivalencytech.EquivalencyTech;
 import io.github.sefiraat.equivalencytech.misc.Utils;
 import io.github.sefiraat.equivalencytech.statics.Messages;
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.configuration.ConfigurationSection;
@@ -36,6 +37,10 @@ public class ConfigMain {
     private FileConfiguration dChestConfig;
     private File cChestConfigFile;
     private FileConfiguration cChestConfig;
+
+    private boolean blockStoreDegraded;
+    private int blockStoreExpectedLocations;
+    private boolean blockStoreReloadScheduled;
 
     public ConfigStrings getStrings() {
         return strings;
@@ -173,15 +178,101 @@ public class ConfigMain {
             blockStoreConfigFile.getParentFile().mkdirs();
             plugin.saveResource("block_storage.yml", false);
         }
+        blockStoreExpectedLocations = BlockStoreIntegrity.countSerialisedLocations(blockStoreConfigFile);
+        loadBlockStoreConfig();
+    }
+
+    private void loadBlockStoreConfig() {
         blockStoreConfig = new YamlConfiguration();
         try {
             blockStoreConfig.load(blockStoreConfigFile);
         } catch (IOException | InvalidConfigurationException e) {
             e.printStackTrace();
         }
+        checkBlockStoreIntegrity();
+    }
+
+    /**
+     * Los mundos de BentoBox se crean despues de nuestro onEnable, asi que Location.deserialize
+     * lanza "unknown world" y Bukkit borra esas entradas del arbol en silencio. Al guardar el
+     * fichero mas tarde se perdian del disco para siempre. Comparamos lo cargado contra lo que
+     * hay escrito para detectarlo y, mientras falten posiciones, bloqueamos el guardado.
+     */
+    private void checkBlockStoreIntegrity() {
+        if (blockStoreExpectedLocations < 0) {
+            // No se pudo leer el fichero en crudo: no hay con que comparar, no bloqueamos nada.
+            blockStoreDegraded = false;
+            return;
+        }
+
+        int loaded = countLoadedLocations();
+        blockStoreDegraded = loaded < blockStoreExpectedLocations;
+
+        if (!blockStoreDegraded) {
+            return;
+        }
+
+        plugin.getLogger().severe(
+            "block_storage.yml: " + (blockStoreExpectedLocations - loaded) + " de "
+            + blockStoreExpectedLocations + " posiciones no se pudieron leer porque su mundo no"
+            + " esta cargado " + describeMissingWorlds() + ". No se guardara este fichero mientras"
+            + " falten, para no borrar los cofres de esos mundos."
+        );
+
+        if (!blockStoreReloadScheduled) {
+            // La primera tick corre cuando ya han arrancado todos los plugins y sus mundos
+            // existen; entonces el fichero se relee entero y el guardado se rehabilita solo.
+            blockStoreReloadScheduled = true;
+            Bukkit.getScheduler().runTask(plugin, this::retryBlockStoreLoad);
+        }
+    }
+
+    private void retryBlockStoreLoad() {
+        loadBlockStoreConfig();
+        if (!blockStoreDegraded) {
+            plugin.getLogger().info(
+                "block_storage.yml releido con todos los mundos disponibles: "
+                + blockStoreExpectedLocations + " posiciones recuperadas y guardado rehabilitado."
+            );
+        }
+    }
+
+    private int countLoadedLocations() {
+        return countLoadedLocations(DIS_CHEST_CFG) + countLoadedLocations(CON_CHEST_CFG);
+    }
+
+    private int countLoadedLocations(String path) {
+        ConfigurationSection section = blockStoreConfig.getConfigurationSection(path);
+        if (section == null) {
+            return 0;
+        }
+        int count = 0;
+        for (String key : section.getKeys(false)) {
+            if (section.getLocation(key) != null) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    private String describeMissingWorlds() {
+        List<String> missing = new ArrayList<>();
+        for (String world : BlockStoreIntegrity.referencedWorlds(blockStoreConfigFile)) {
+            if (Bukkit.getWorld(world) == null) {
+                missing.add(world);
+            }
+        }
+        return missing.isEmpty() ? "(mundo no identificado)" : String.join(", ", missing);
     }
 
     private void saveBlockStoreConfig() {
+        if (blockStoreDegraded) {
+            plugin.getLogger().severe(
+                "block_storage.yml NO se guarda: la carga quedo incompleta y sobrescribirlo"
+                + " borraria las posiciones que no se pudieron leer."
+            );
+            return;
+        }
         try {
             blockStoreConfig.save(blockStoreConfigFile);
         } catch (IOException e) {
@@ -323,20 +414,29 @@ public class ConfigMain {
     }
 
 
-    public static Integer getNextDChestID(EquivalencyTech plugin) {
-        FileConfiguration c = plugin.getConfigMainClass().blockStoreConfig;
-        ConfigurationSection section = c.getConfigurationSection(DIS_CHEST_CFG);
-        int nextValue = 1;
+    private static int highestNumericKey(@Nullable ConfigurationSection section) {
+        int highest = 0;
         if (section != null) {
             for (String key : section.getKeys(false)) {
-                int value = Integer.parseInt(key);
-                if (value > nextValue) {
-                    nextValue = value;
+                try {
+                    highest = Math.max(highest, Integer.parseInt(key));
+                } catch (NumberFormatException ignored) {
+                    // Claves que no son ids (o basura heredada) no participan en la numeracion.
                 }
             }
-            nextValue++;
         }
-        return nextValue;
+        return highest;
+    }
+
+    public static Integer getNextDChestID(EquivalencyTech plugin) {
+        ConfigMain config = plugin.getConfigMainClass();
+        // Se mira tambien el fichero de dueños: si una posicion se perdio al cargar pero su
+        // registro de propiedad sigue vivo, reutilizar ese id le daria el cofre a otro jugador.
+        int nextValue = Math.max(
+            highestNumericKey(config.blockStoreConfig.getConfigurationSection(DIS_CHEST_CFG)),
+            highestNumericKey(config.dChestConfig)
+        );
+        return nextValue + 1;
     }
 
     public static void addDChestStore(EquivalencyTech plugin, Location location) {
@@ -351,7 +451,7 @@ public class ConfigMain {
         if (section != null) {
             for (String key : section.getKeys(false)) {
                 Location l = section.getLocation(key);
-                if (l.equals(location)) {
+                if (location.equals(l)) {
                     return Integer.parseInt(key);
                 }
             }
@@ -362,7 +462,9 @@ public class ConfigMain {
     public static void removeDChestStore(EquivalencyTech plugin, Integer id) {
         FileConfiguration c = plugin.getConfigMainClass().blockStoreConfig;
         ConfigurationSection section = c.getConfigurationSection(DIS_CHEST_CFG);
-        section.set(id.toString(), null);
+        if (section != null) {
+            section.set(id.toString(), null);
+        }
     }
 
     public static void setupDChest(EquivalencyTech plugin, Integer id, Player player) {
@@ -386,10 +488,11 @@ public class ConfigMain {
         return c.getString(id + ".OWNING_PLAYER");
     }
 
+    @Nullable
     public static Location getDChestLocation(EquivalencyTech plugin, Integer id) {
         FileConfiguration c = plugin.getConfigMainClass().blockStoreConfig;
         ConfigurationSection section = c.getConfigurationSection(DIS_CHEST_CFG);
-        return section.getLocation(id.toString());
+        return section == null ? null : section.getLocation(id.toString());
     }
 
     public static List<Location> getAllDChestLocations(EquivalencyTech plugin) {
@@ -398,26 +501,24 @@ public class ConfigMain {
         List<Location> ids = new ArrayList<>();
         if (section != null) {
             for (String s : section.getKeys(false)) {
-                ids.add(section.getLocation(s));
+                Location location = section.getLocation(s);
+                if (location != null && location.getWorld() != null) {
+                    ids.add(location);
+                }
             }
         }
         return ids;
     }
 
     public static Integer getNextCChestID(EquivalencyTech plugin) {
-        FileConfiguration c = plugin.getConfigMainClass().blockStoreConfig;
-        ConfigurationSection section = c.getConfigurationSection(CON_CHEST_CFG);
-        int nextValue = 1;
-        if (section != null) {
-            for (String key : section.getKeys(false)) {
-                int value = Integer.parseInt(key);
-                if (value > nextValue) {
-                    nextValue = value;
-                }
-            }
-            nextValue++;
-        }
-        return nextValue;
+        ConfigMain config = plugin.getConfigMainClass();
+        // Se mira tambien el fichero de dueños: si una posicion se perdio al cargar pero su
+        // registro de propiedad sigue vivo, reutilizar ese id le daria el cofre a otro jugador.
+        int nextValue = Math.max(
+            highestNumericKey(config.blockStoreConfig.getConfigurationSection(CON_CHEST_CFG)),
+            highestNumericKey(config.cChestConfig)
+        );
+        return nextValue + 1;
     }
 
     public static void addCChestStore(EquivalencyTech plugin, Location location) {
@@ -432,7 +533,7 @@ public class ConfigMain {
         if (section != null) {
             for (String key : section.getKeys(false)) {
                 Location l = section.getLocation(key);
-                if (l.equals(location)) {
+                if (location.equals(l)) {
                     return Integer.parseInt(key);
                 }
             }
@@ -443,7 +544,9 @@ public class ConfigMain {
     public static void removeCChestStore(EquivalencyTech plugin, Integer id) {
         FileConfiguration c = plugin.getConfigMainClass().blockStoreConfig;
         ConfigurationSection section = c.getConfigurationSection(CON_CHEST_CFG);
-        section.set(id.toString(), null);
+        if (section != null) {
+            section.set(id.toString(), null);
+        }
     }
 
     public static void setupCChest(EquivalencyTech plugin, Integer id, Player player) {
@@ -467,10 +570,11 @@ public class ConfigMain {
         return c.getString(id + ".OWNING_PLAYER");
     }
 
+    @Nullable
     public static Location getCChestLocation(EquivalencyTech plugin, Integer id) {
         FileConfiguration c = plugin.getConfigMainClass().blockStoreConfig;
         ConfigurationSection section = c.getConfigurationSection(CON_CHEST_CFG);
-        return section.getLocation(id.toString());
+        return section == null ? null : section.getLocation(id.toString());
     }
 
     public static List<Location> getAllCChestLocations(EquivalencyTech plugin) {
@@ -479,7 +583,10 @@ public class ConfigMain {
         List<Location> ids = new ArrayList<>();
         if (section != null) {
             for (String s : section.getKeys(false)) {
-                ids.add(section.getLocation(s));
+                Location location = section.getLocation(s);
+                if (location != null && location.getWorld() != null) {
+                    ids.add(location);
+                }
             }
         }
         return ids;

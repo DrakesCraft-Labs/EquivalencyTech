@@ -35,7 +35,11 @@ public class RunnableEQTick extends BukkitRunnable {
     private void processDChests() {
         for (Location location : ConfigMain.getAllDChestLocations(plugin)) {
             if (location.getWorld().isChunkLoaded(location.getBlockX() >> 4, location.getBlockZ() >> 4)) {
-                int chestId = ConfigMain.getDChestIdStore(plugin, location);
+                Integer storedId = ConfigMain.getDChestIdStore(plugin, location);
+                if (storedId == null) {
+                    continue;
+                }
+                int chestId = storedId;
                 String playerUUID = ConfigMain.getOwnerDChest(plugin, chestId);
 
                 BlockState state = location.getBlock().getState();
@@ -91,7 +95,11 @@ public class RunnableEQTick extends BukkitRunnable {
     private void processCChests() {
         for (Location location : ConfigMain.getAllCChestLocations(plugin)) {
             if (location.getWorld().isChunkLoaded(location.getBlockX() >> 4, location.getBlockZ() >> 4)) {
-                int chestId = ConfigMain.getCChestIdStore(plugin, location);
+                Integer storedId = ConfigMain.getCChestIdStore(plugin, location);
+                if (storedId == null) {
+                    continue;
+                }
+                int chestId = storedId;
                 String playerUUID = ConfigMain.getOwnerCChest(plugin, chestId);
 
                 BlockState state = location.getBlock().getState();
