@@ -31,6 +31,14 @@ public class RunnableEQTick extends BukkitRunnable {
     private final Set<Integer> warnedDChests = new HashSet<>();
     private final Set<Integer> warnedCChests = new HashSet<>();
 
+    // getOwnerDChest/getOwnerCChest leen OWNING_PLAYER del yml de cofres y devuelven null cuando
+    // ese registro se perdio pero la posicion sigue en blockstore.yml (la misma desincronizacion
+    // que ya obligo a filtrar los mundos que cargan tarde). Con el uuid a null, getLearnedItems y
+    // getPlayerEmc acaban llamando a FileConfiguration.contains(null), que lanza IllegalArgumentException:
+    // al ocurrir dentro de este runnable de 20 ticks, se repetiria cada segundo en el hilo principal.
+    private final Set<Integer> warnedDOwners = new HashSet<>();
+    private final Set<Integer> warnedCOwners = new HashSet<>();
+
     public RunnableEQTick(EquivalencyTech plugin) {
         this.plugin = plugin;
         sf = EquivalencyTech.getInstance().getManagerSupportedPlugins().isInstalledSlimefun();
@@ -51,6 +59,14 @@ public class RunnableEQTick extends BukkitRunnable {
                 }
                 int chestId = storedId;
                 String playerUUID = ConfigMain.getOwnerDChest(plugin, chestId);
+                if (playerUUID == null) {
+                    if (warnedDOwners.add(chestId)) {
+                        EquivalencyTech.getInstance().getLogger()
+                            .warning(getErrorOrphanOwner("Dissolution", chestId, location, "dissolution_chests.yml"));
+                    }
+                    continue;
+                }
+                warnedDOwners.remove(chestId);
 
                 BlockState state = location.getBlock().getState();
 
@@ -115,6 +131,14 @@ public class RunnableEQTick extends BukkitRunnable {
                 }
                 int chestId = storedId;
                 String playerUUID = ConfigMain.getOwnerCChest(plugin, chestId);
+                if (playerUUID == null) {
+                    if (warnedCOwners.add(chestId)) {
+                        EquivalencyTech.getInstance().getLogger()
+                            .warning(getErrorOrphanOwner("Condensate", chestId, location, "condensate_chests.yml"));
+                    }
+                    continue;
+                }
+                warnedCOwners.remove(chestId);
 
                 BlockState state = location.getBlock().getState();
 
@@ -152,6 +176,17 @@ public class RunnableEQTick extends BukkitRunnable {
                 "Either replace with a vanilla chest (location : {1}) " +
                 "or remove from dissolution_chests.yml",
             chestId,
+            location.toString()
+        );
+    }
+
+    public static String getErrorOrphanOwner(String kind, int chestId, Location location, String file) {
+        return MessageFormat.format(
+            "A {0} chest (ID: {1}) has no OWNING_PLAYER recorded and cannot be processed. " +
+                "Either restore its owner in {2} or remove the entry (location : {3})",
+            kind,
+            chestId,
+            file,
             location.toString()
         );
     }
