@@ -15,11 +15,21 @@ import org.bukkit.scheduler.BukkitRunnable;
 
 import java.text.MessageFormat;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Set;
 
 public class RunnableEQTick extends BukkitRunnable {
 
     public final EquivalencyTech plugin;
     public final boolean sf;
+
+    // Este runnable corre cada 20 ticks (1 vez por segundo) en el hilo principal. El aviso de
+    // cofre huerfano se emitia en CADA pasada por cada cofre cuyo chunk estuviera cargado: los
+    // 8 cofres huerfanos de laboratorio produjeron 368 lineas en 50 s, ~28.800 por hora mientras
+    // esos chunks siguieran cargados. Se recuerda que ID ya fue avisado y se vuelve a permitir el
+    // aviso solo cuando el cofre se restaura, para no perder la senal si el problema reaparece.
+    private final Set<Integer> warnedDChests = new HashSet<>();
+    private final Set<Integer> warnedCChests = new HashSet<>();
 
     public RunnableEQTick(EquivalencyTech plugin) {
         this.plugin = plugin;
@@ -45,9 +55,13 @@ public class RunnableEQTick extends BukkitRunnable {
                 BlockState state = location.getBlock().getState();
 
                 if (!(state instanceof Chest)) {
-                    EquivalencyTech.getInstance().getLogger().warning(getErrorDissolutionChest(chestId, location));
+                    if (warnedDChests.add(chestId)) {
+                        EquivalencyTech.getInstance().getLogger().warning(getErrorDissolutionChest(chestId, location));
+                    }
                     continue;
                 }
+
+                warnedDChests.remove(chestId);
 
                 Chest chest = (Chest) location.getBlock().getState();
                 Inventory inventory = chest.getBlockInventory();
@@ -105,9 +119,13 @@ public class RunnableEQTick extends BukkitRunnable {
                 BlockState state = location.getBlock().getState();
 
                 if (!(state instanceof Chest)) {
-                    EquivalencyTech.getInstance().getLogger().warning(getErrorCondensateChest(chestId, location));
+                    if (warnedCChests.add(chestId)) {
+                        EquivalencyTech.getInstance().getLogger().warning(getErrorCondensateChest(chestId, location));
+                    }
                     continue;
                 }
+
+                warnedCChests.remove(chestId);
 
                 Chest chest = (Chest) location.getBlock().getState();
                 Inventory inventory = chest.getBlockInventory();
@@ -130,7 +148,7 @@ public class RunnableEQTick extends BukkitRunnable {
 
     public static String getErrorDissolutionChest(int chestId, Location location) {
         return MessageFormat.format(
-            "A Dissolution chest (ID: {0}has been removed wrongly. " +
+            "A Dissolution chest (ID: {0}) has been removed wrongly. " +
                 "Either replace with a vanilla chest (location : {1}) " +
                 "or remove from dissolution_chests.yml",
             chestId,
@@ -140,7 +158,7 @@ public class RunnableEQTick extends BukkitRunnable {
 
     public static String getErrorCondensateChest(int chestId, Location location) {
         return MessageFormat.format(
-            "A Condensate chest (ID: {0}has been removed wrongly. " +
+            "A Condensate chest (ID: {0}) has been removed wrongly. " +
                 "Either replace with a vanilla chest (location : {1})  " +
                 "or remove from condensate_chests.yml",
             chestId,
