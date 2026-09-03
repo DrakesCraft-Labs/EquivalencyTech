@@ -212,19 +212,27 @@ public class ConfigMain {
             return;
         }
 
-        plugin.getLogger().severe(
-            "block_storage.yml: " + (blockStoreExpectedLocations - loaded) + " de "
+        String detalle = "block_storage.yml: " + (blockStoreExpectedLocations - loaded) + " de "
             + blockStoreExpectedLocations + " posiciones no se pudieron leer porque su mundo no"
             + " esta cargado " + describeMissingWorlds() + ". No se guardara este fichero mientras"
-            + " falten, para no borrar los cofres de esos mundos."
-        );
+            + " falten, para no borrar los cofres de esos mundos.";
 
-        if (!blockStoreReloadScheduled) {
-            // La primera tick corre cuando ya han arrancado todos los plugins y sus mundos
-            // existen; entonces el fichero se relee entero y el guardado se rehabilita solo.
-            blockStoreReloadScheduled = true;
-            Bukkit.getScheduler().runTask(plugin, this::retryBlockStoreLoad);
+        if (blockStoreReloadScheduled) {
+            // Ya se reintento con el arranque terminado y siguen faltando mundos: el guardado
+            // queda bloqueado toda la sesion y eso si necesita intervencion.
+            plugin.getLogger().severe(detalle);
+            return;
         }
+
+        // Primera deteccion durante onEnable: los mundos de BentoBox aun no existen y el
+        // reintento de la primera tick los recupera. Es ruido esperado, no una averia; se
+        // registra como aviso para no disparar alertas de arranque que se resuelven solas.
+        plugin.getLogger().warning(detalle + " Se reintentara al terminar el arranque.");
+
+        // La primera tick corre cuando ya han arrancado todos los plugins y sus mundos
+        // existen; entonces el fichero se relee entero y el guardado se rehabilita solo.
+        blockStoreReloadScheduled = true;
+        Bukkit.getScheduler().runTask(plugin, this::retryBlockStoreLoad);
     }
 
     private void retryBlockStoreLoad() {
