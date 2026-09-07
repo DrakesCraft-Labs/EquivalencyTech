@@ -38,9 +38,22 @@ public class ConfigMain {
     private File cChestConfigFile;
     private FileConfiguration cChestConfig;
 
+    /**
+     * Cuantas veces se relee block_storage.yml esperando a que aparezcan los mundos que faltan.
+     * La primera corre en la tick siguiente y el resto cada {@link #BLOCK_STORE_RELOAD_PERIOD_TICKS},
+     * asi que cubren unos cinco minutos desde el arranque.
+     */
+    private static final int BLOCK_STORE_RELOAD_ATTEMPTS = 31;
+    private static final long BLOCK_STORE_RELOAD_PERIOD_TICKS = 200L;
+
+    /** Cada cuanto se repite el aviso de guardado bloqueado, para no llenar el log. */
+    private static final long BLOCK_STORE_SAVE_WARNING_INTERVAL_MS = 300_000L;
+
     private boolean blockStoreDegraded;
     private int blockStoreExpectedLocations;
-    private boolean blockStoreReloadScheduled;
+    private int blockStoreReloadAttempts;
+    private boolean blockStoreReloadPending;
+    private long blockStoreSaveWarnedAt;
 
     public ConfigStrings getStrings() {
         return strings;
@@ -217,30 +230,63 @@ public class ConfigMain {
             + " esta cargado " + describeMissingWorlds() + ". No se guardara este fichero mientras"
             + " falten, para no borrar los cofres de esos mundos.";
 
-        if (blockStoreReloadScheduled) {
-            // Ya se reintento con el arranque terminado y siguen faltando mundos: el guardado
-            // queda bloqueado toda la sesion y eso si necesita intervencion.
-            plugin.getLogger().severe(detalle);
+        if (isFirstBlockStoreReload(blockStoreReloadAttempts)) {
+            // Primera deteccion durante onEnable: los mundos de BentoBox aun no existen y el
+            // reintento de la primera tick suele recuperarlos. Es ruido esperado, no una averia;
+            // se registra como aviso para no disparar alertas de arranque que se resuelven solas.
+            plugin.getLogger().warning(detalle + " Se reintentara al terminar el arranque.");
+            scheduleBlockStoreReload(0L);
             return;
         }
 
-        // Primera deteccion durante onEnable: los mundos de BentoBox aun no existen y el
-        // reintento de la primera tick los recupera. Es ruido esperado, no una averia; se
-        // registra como aviso para no disparar alertas de arranque que se resuelven solas.
-        plugin.getLogger().warning(detalle + " Se reintentara al terminar el arranque.");
+        if (shouldRetryBlockStoreReload(blockStoreReloadAttempts)) {
+            // BentoBox crea sus mundos de forma asincrona: unas veces estan listos en la primera
+            // tick y otras tardan minutos. Mientras queden intentos seguimos releyendo en silencio
+            // en vez de rendirnos, porque rendirse deja el guardado bloqueado toda la sesion.
+            scheduleBlockStoreReload(BLOCK_STORE_RELOAD_PERIOD_TICKS);
+            return;
+        }
 
-        // La primera tick corre cuando ya han arrancado todos los plugins y sus mundos
-        // existen; entonces el fichero se relee entero y el guardado se rehabilita solo.
-        blockStoreReloadScheduled = true;
-        Bukkit.getScheduler().runTask(plugin, this::retryBlockStoreLoad);
+        // Agotados los reintentos y siguen faltando mundos: el guardado queda bloqueado toda la
+        // sesion y eso si necesita intervencion.
+        plugin.getLogger().severe(detalle);
+    }
+
+    /** La deteccion de onEnable, la unica que se anuncia en el log. */
+    static boolean isFirstBlockStoreReload(int attempts) {
+        return attempts == 0;
+    }
+
+    /** Quedan reintentos: se relee en silencio en vez de rendirse y bloquear toda la sesion. */
+    static boolean shouldRetryBlockStoreReload(int attempts) {
+        return attempts < BLOCK_STORE_RELOAD_ATTEMPTS;
+    }
+
+    /**
+     * Freno del aviso de guardado bloqueado. lastWarnedAt a 0 significa "aun no se ha avisado en
+     * esta sesion", asi que el primero sale siempre sin depender de la magnitud del reloj.
+     */
+    static boolean shouldWarnBlockStoreSave(long now, long lastWarnedAt) {
+        return lastWarnedAt == 0L || now - lastWarnedAt >= BLOCK_STORE_SAVE_WARNING_INTERVAL_MS;
+    }
+
+    private void scheduleBlockStoreReload(long delayTicks) {
+        if (blockStoreReloadPending) {
+            return;
+        }
+        blockStoreReloadPending = true;
+        Bukkit.getScheduler().runTaskLater(plugin, this::retryBlockStoreLoad, delayTicks);
     }
 
     private void retryBlockStoreLoad() {
+        blockStoreReloadPending = false;
+        blockStoreReloadAttempts++;
         loadBlockStoreConfig();
         if (!blockStoreDegraded) {
             plugin.getLogger().info(
                 "block_storage.yml releido con todos los mundos disponibles: "
-                + blockStoreExpectedLocations + " posiciones recuperadas y guardado rehabilitado."
+                + blockStoreExpectedLocations + " posiciones recuperadas y guardado rehabilitado"
+                + " tras " + blockStoreReloadAttempts + " reintento(s)."
             );
         }
     }
@@ -275,10 +321,17 @@ public class ConfigMain {
 
     private void saveBlockStoreConfig() {
         if (blockStoreDegraded) {
-            plugin.getLogger().severe(
-                "block_storage.yml NO se guarda: la carga quedo incompleta y sobrescribirlo"
-                + " borraria las posiciones que no se pudieron leer."
-            );
+            // Se guarda en cada autosave, asi que sin freno una sola sesion degradada deja miles
+            // de lineas identicas en el log y tapa el resto de la consola.
+            long now = System.currentTimeMillis();
+            if (shouldWarnBlockStoreSave(now, blockStoreSaveWarnedAt)) {
+                blockStoreSaveWarnedAt = now;
+                plugin.getLogger().severe(
+                    "block_storage.yml NO se guarda: la carga quedo incompleta y sobrescribirlo"
+                    + " borraria las posiciones que no se pudieron leer. Este aviso se repite como"
+                    + " mucho cada 5 minutos mientras dure el bloqueo."
+                );
+            }
             return;
         }
         try {
