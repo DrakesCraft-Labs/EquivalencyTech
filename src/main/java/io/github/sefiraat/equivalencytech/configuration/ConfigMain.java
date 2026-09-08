@@ -50,6 +50,7 @@ public class ConfigMain {
     private static final long BLOCK_STORE_SAVE_WARNING_INTERVAL_MS = 300_000L;
 
     private boolean blockStoreDegraded;
+    private int blockStoreSilencedErrors;
     private int blockStoreExpectedLocations;
     private int blockStoreReloadAttempts;
     private boolean blockStoreReloadPending;
@@ -197,11 +198,16 @@ public class ConfigMain {
 
     private void loadBlockStoreConfig() {
         blockStoreConfig = new YamlConfiguration();
-        try {
-            blockStoreConfig.load(blockStoreConfigFile);
-        } catch (IOException | InvalidConfigurationException e) {
-            e.printStackTrace();
-        }
+        // Bukkit escribe una traza completa por cada Location de un mundo aun no creado. Son
+        // nueve por arranque para algo que el reintento resuelve solo, asi que se descartan
+        // mientras dura la lectura y se resumen en el aviso propio.
+        blockStoreSilencedErrors = BlockStoreLoadSilencer.runSilenced(() -> {
+            try {
+                blockStoreConfig.load(blockStoreConfigFile);
+            } catch (IOException | InvalidConfigurationException e) {
+                e.printStackTrace();
+            }
+        });
         checkBlockStoreIntegrity();
     }
 
@@ -234,7 +240,10 @@ public class ConfigMain {
             // Primera deteccion durante onEnable: los mundos de BentoBox aun no existen y el
             // reintento de la primera tick suele recuperarlos. Es ruido esperado, no una averia;
             // se registra como aviso para no disparar alertas de arranque que se resuelven solas.
-            plugin.getLogger().warning(detalle + " Se reintentara al terminar el arranque.");
+            plugin.getLogger().warning(
+                detalle + " Se reintentara al terminar el arranque."
+                + describeSilencedErrors(blockStoreSilencedErrors)
+            );
             scheduleBlockStoreReload(0L);
             return;
         }
@@ -250,6 +259,18 @@ public class ConfigMain {
         // Agotados los reintentos y siguen faltando mundos: el guardado queda bloqueado toda la
         // sesion y eso si necesita intervencion.
         plugin.getLogger().severe(detalle);
+    }
+
+    /**
+     * Deja constancia de las trazas de Bukkit que se descartaron, para que quien lea el arranque
+     * sepa que no se han perdido en silencio.
+     */
+    static String describeSilencedErrors(int silenced) {
+        if (silenced <= 0) {
+            return "";
+        }
+        return " Se han silenciado " + silenced + " traza(s) identica(s) de Bukkit por estas"
+            + " mismas posiciones.";
     }
 
     /** La deteccion de onEnable, la unica que se anuncia en el log. */
