@@ -77,14 +77,25 @@ public class ChestPlaceListener implements Listener {
         }
     }
 
-    @EventHandler
+    // Prioridad HIGHEST con ignoreCancelled: las protecciones (BentoBox rompe en LOW,
+    // WorldGuard/ProtectionStones en NORMAL) ya decidieron. Con el @EventHandler pelado
+    // anterior este listener vaciaba el cofre y lo ponia a AIR aunque la rotura estuviese
+    // cancelada, lo que permitia a un visitante robar un cofre EMC dentro de una isla.
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onChestBreak(BlockBreakEvent e) {
         Location location = e.getBlock().getLocation();
         Integer disID = ConfigMain.getDChestIdStore(plugin, location);
         Integer conID = ConfigMain.getCChestIdStore(plugin, location);
         if (disID != null || conID != null) {
+            if (!(e.getBlock().getState() instanceof Chest chest)) {
+                // El bloque ya no es un cofre: la entrada quedo huerfana por una via sin
+                // BlockBreakEvent (explosion, WorldEdit, reseteo de isla). Se limpia el
+                // registro muerto en vez de romper con ClassCastException y de seguir
+                // avisando por cada tick. No se cancela: el jugador rompe lo que haya.
+                purgarRegistroHuerfano(location, disID, conID);
+                return;
+            }
             e.setCancelled(true);
-            Chest chest = (Chest) e.getBlock().getState();
             Inventory inventory = chest.getBlockInventory();
             for (ItemStack itemStack : inventory.getContents()) {
                 if (itemStack != null && itemStack.getType() != Material.AIR) {
@@ -105,6 +116,20 @@ public class ChestPlaceListener implements Listener {
             }
         }
 
+    }
+
+    private void purgarRegistroHuerfano(Location location, Integer disID, Integer conID) {
+        if (disID != null) {
+            ConfigMain.removeDChestStore(plugin, disID);
+            ConfigMain.removeDChest(plugin, disID);
+        }
+        if (conID != null) {
+            ConfigMain.removeCChestStore(plugin, conID);
+            ConfigMain.removeCChest(plugin, conID);
+        }
+        plugin.getLogger().info(
+            "Registro huerfano de cofre EMC eliminado (dissolution=" + disID + ", condensate=" + conID
+                + ") : el bloque en " + location + " ya no es un cofre.");
     }
 
     @EventHandler(priority = EventPriority.LOW)
