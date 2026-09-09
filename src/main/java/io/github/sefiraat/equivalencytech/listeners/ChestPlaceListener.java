@@ -34,14 +34,14 @@ public class ChestPlaceListener implements Listener {
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
     }
 
-    @EventHandler(priority = EventPriority.LOW)
+    // Slimefun y las protecciones de isla deciden antes si la colocacion es valida.
+    // MONITOR observa el resultado final: persistir en LOW dejaba registros huerfanos
+    // cuando otro listener cancelaba despues.
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onChestPlace(BlockPlaceEvent e) {
         if (e.getBlockPlaced().getType() == Material.CHEST) {
             boolean isDis = isDis(e);
             boolean isCon = isCon(e);
-            if (e.isCancelled()) {
-                return;
-            }
             if (isDis) {
                 placeDisChest(e);
                 return;
