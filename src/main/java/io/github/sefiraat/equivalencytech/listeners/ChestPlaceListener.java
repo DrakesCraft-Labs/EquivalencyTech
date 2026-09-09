@@ -34,20 +34,15 @@ public class ChestPlaceListener implements Listener {
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
     }
 
-    // Slimefun y las protecciones de isla deciden antes si la colocacion es valida.
-    // MONITOR observa el resultado final: persistir en LOW dejaba registros huerfanos
-    // cuando otro listener cancelaba despues.
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onChestPlace(BlockPlaceEvent e) {
         if (e.getBlockPlaced().getType() == Material.CHEST) {
             boolean isDis = isDis(e);
             boolean isCon = isCon(e);
-            if (isDis) {
-                placeDisChest(e);
-                return;
-            }
-            if (isCon) {
-                placeConChest(e);
+            if (isDis || isCon) {
+                if (!noNearbyChest(e.getBlockPlaced())) {
+                    e.setCancelled(true);
+                }
                 return;
             }
             if (nearbyEMCChest(e)) {
@@ -57,24 +52,30 @@ public class ChestPlaceListener implements Listener {
         }
     }
 
-    private void placeConChest(BlockPlaceEvent e) {
-        if (noNearbyChest(e.getBlockPlaced())) {
-            Location location = e.getBlockPlaced().getLocation();
-            ConfigMain.addCChestStore(plugin, location);
-            ConfigMain.setupCChest(plugin, ConfigMain.getCChestIdStore(plugin, location), e.getPlayer());
-        } else {
-            e.setCancelled(true);
+    // MONITOR observa el resultado final de Slimefun y las protecciones. Separar la
+    // persistencia de la validacion evita registros huerfanos sin cancelar en MONITOR.
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onChestPlaceAccepted(BlockPlaceEvent e) {
+        if (e.getBlockPlaced().getType() != Material.CHEST) {
+            return;
+        }
+        if (isDis(e)) {
+            placeDisChest(e);
+        } else if (isCon(e)) {
+            placeConChest(e);
         }
     }
 
+    private void placeConChest(BlockPlaceEvent e) {
+        Location location = e.getBlockPlaced().getLocation();
+        ConfigMain.addCChestStore(plugin, location);
+        ConfigMain.setupCChest(plugin, ConfigMain.getCChestIdStore(plugin, location), e.getPlayer());
+    }
+
     private void placeDisChest(BlockPlaceEvent e) {
-        if (noNearbyChest(e.getBlockPlaced())) {
-            Location location = e.getBlockPlaced().getLocation();
-            ConfigMain.addDChestStore(plugin, location);
-            ConfigMain.setupDChest(plugin, ConfigMain.getDChestIdStore(plugin, location), e.getPlayer());
-        } else {
-            e.setCancelled(true);
-        }
+        Location location = e.getBlockPlaced().getLocation();
+        ConfigMain.addDChestStore(plugin, location);
+        ConfigMain.setupDChest(plugin, ConfigMain.getDChestIdStore(plugin, location), e.getPlayer());
     }
 
     // Prioridad HIGHEST con ignoreCancelled: las protecciones (BentoBox rompe en LOW,
