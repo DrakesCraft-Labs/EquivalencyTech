@@ -52,6 +52,9 @@ public class RunnableEQTick extends BukkitRunnable {
 
     private void processDChests() {
         for (Location location : ConfigMain.getAllDChestLocations(plugin)) {
+            if (Utils.isBlockedWorld(plugin, location.getWorld())) {
+                continue;
+            }
             if (location.getWorld().isChunkLoaded(location.getBlockX() >> 4, location.getBlockZ() >> 4)) {
                 Integer storedId = ConfigMain.getDChestIdStore(plugin, location);
                 if (storedId == null) {
@@ -124,6 +127,9 @@ public class RunnableEQTick extends BukkitRunnable {
 
     private void processCChests() {
         for (Location location : ConfigMain.getAllCChestLocations(plugin)) {
+            if (Utils.isBlockedWorld(plugin, location.getWorld())) {
+                continue;
+            }
             if (location.getWorld().isChunkLoaded(location.getBlockX() >> 4, location.getBlockZ() >> 4)) {
                 Integer storedId = ConfigMain.getCChestIdStore(plugin, location);
                 if (storedId == null) {

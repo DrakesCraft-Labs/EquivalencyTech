@@ -5,6 +5,7 @@ import io.github.sefiraat.equivalencytech.configuration.ConfigMain;
 import io.github.sefiraat.equivalencytech.misc.Utils;
 import io.github.sefiraat.equivalencytech.statics.ContainerStorage;
 import io.github.sefiraat.equivalencytech.statics.Messages;
+import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
@@ -40,6 +41,15 @@ public class ChestPlaceListener implements Listener {
             boolean isDis = isDis(e);
             boolean isCon = isCon(e);
             if (isDis || isCon) {
+                if (Utils.isBlockedWorld(plugin, e.getBlockPlaced().getWorld())) {
+                    String aviso = plugin.getConfig().getString("MESSAGES.CHEST_WORLD_BLOCKED");
+                    if (aviso == null || aviso.isBlank()) {
+                        aviso = "&cLos cofres de EMC no estan permitidos en esta modalidad.";
+                    }
+                    e.getPlayer().sendMessage(ChatColor.translateAlternateColorCodes('&', aviso));
+                    e.setCancelled(true);
+                    return;
+                }
                 if (!noNearbyChest(e.getBlockPlaced())) {
                     e.setCancelled(true);
                 }
@@ -139,6 +149,17 @@ public class ChestPlaceListener implements Listener {
             Location location = e.getClickedBlock().getLocation();
             Integer disID = ConfigMain.getDChestIdStore(plugin, location);
             Integer conID = ConfigMain.getCChestIdStore(plugin, location);
+            if (disID != null || conID != null) {
+                if (Utils.isBlockedWorld(plugin, location.getWorld())) {
+                    String aviso = plugin.getConfig().getString("MESSAGES.CHEST_WORLD_BLOCKED");
+                    if (aviso == null || aviso.isBlank()) {
+                        aviso = "&cLos cofres de EMC no estan permitidos en esta modalidad.";
+                    }
+                    e.getPlayer().sendMessage(ChatColor.translateAlternateColorCodes('&', aviso));
+                    e.setCancelled(true);
+                    return;
+                }
+            }
             if (disID != null) {
                 if (isChestBeingOpened(e) && !hasPermissionDChest(disID, e.getPlayer())) {
                     e.getPlayer().sendMessage(Messages.messageEventCantOpenNotOwner(plugin));

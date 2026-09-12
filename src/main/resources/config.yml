@@ -265,6 +265,8 @@ MESSAGES:
   EVENT_PLACE_EMC_CHEST_ADJACENT: "You cannot place a EMC Chest next to another chest."
   EVENT_CHEST_ITEM_SET: "Item synthesis set to held item."
   EVENT_CHEST_ITEM_UNSET: "Item synthesis stopped."
+  CHEST_WORLD_BLOCKED: "&cLos cofres de EMC no estan permitidos en esta modalidad."
+  ORB_WORLD_BLOCKED: "&cEl orbe no funciona en esta modalidad."
 ITEMS:
   GENERAL_CRAFTING_ITEM: "Crafting Ingredient"
   TRANSMUTATION_ORB_NAME: "Transmutation Orb"

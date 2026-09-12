@@ -36,13 +36,12 @@ public class OrbOpenListener implements Listener {
                 // modalidades. En un mundo donde los items se consiguen gratis, el orbe los
                 // convierte en EMC que despues se gasta en la modalidad normal, asi que ahi no
                 // se abre. La lista vive en config porque manana puede haber otro mundo
-                // creativo y no deberia hacer falta recompilar para cubrirlo.
-                if (plugin.getConfig().getStringList("BLOCKED_WORLDS")
-                        .contains(player.getWorld().getName())) {
+                if (io.github.sefiraat.equivalencytech.misc.Utils.isBlockedWorld(plugin, player.getWorld())) {
                     String aviso = plugin.getConfig().getString("MESSAGES.ORB_WORLD_BLOCKED");
-                    if (aviso != null && !aviso.isBlank()) {
-                        player.sendMessage(aviso);
+                    if (aviso == null || aviso.isBlank()) {
+                        aviso = plugin.getConfig().getString("GUI.ORB_WORLD_BLOCKED", "&cEl orbe no funciona en esta modalidad.");
                     }
+                    player.sendMessage(org.bukkit.ChatColor.translateAlternateColorCodes('&', aviso));
                     return;
                 }
 

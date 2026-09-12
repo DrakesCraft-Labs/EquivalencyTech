@@ -93,4 +93,24 @@ public class Utils {
         }
     }
 
+    public static boolean isBlockedWorld(EquivalencyTech plugin, org.bukkit.World world) {
+        if (world == null || plugin == null) {
+            return false;
+        }
+        return isBlockedWorld(plugin.getConfig().getStringList("BLOCKED_WORLDS"), world.getName());
+    }
+
+    public static boolean isBlockedWorld(java.util.List<String> blockedWorlds, String worldName) {
+        if (worldName == null || blockedWorlds == null) {
+            return false;
+        }
+        String normalized = worldName.toLowerCase(java.util.Locale.ROOT);
+        for (String b : blockedWorlds) {
+            if (b != null && normalized.equalsIgnoreCase(b.trim())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
 }
