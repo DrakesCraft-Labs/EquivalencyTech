@@ -53,11 +53,23 @@ public class RunnableEQTick extends BukkitRunnable {
     }
 
     private void processDChests() {
+        // getAllDChestLocations devuelve UNA posicion POR ID, asi que una posicion reclamada por
+        // varios ids entra varias veces en esta vuelta; como getDChestIdStore siempre resuelve al
+        // PRIMER id, el mismo cofre se procesaba una vez por duplicado en el mismo tick (un cofre
+        // con 5 ids consumia 5 items por segundo y acreditaba 5 veces su EMC). La repeticion
+        // dentro de la propia vuelta es la senal de duplicado, y ademas alcanza los casos que el
+        // saneo perezoso no veia: colapsarDuplicados solo se invocaba cuando el id resuelto no
+        // tenia dueño, y en estas posiciones el primer id si lo tiene.
+        Set<Location> vistas = new HashSet<>();
         for (Location location : ConfigMain.getAllDChestLocations(plugin)) {
             if (Utils.isBlockedWorld(plugin, location.getWorld())) {
                 continue;
             }
             if (location.getWorld().isChunkLoaded(location.getBlockX() >> 4, location.getBlockZ() >> 4)) {
+                if (!vistas.add(location)) {
+                    colapsarDuplicados(ConfigMain.getAllDChestIdsStore(plugin, location), location, true);
+                    continue;
+                }
                 Integer storedId = ConfigMain.getDChestIdStore(plugin, location);
                 if (storedId == null) {
                     continue;
@@ -131,11 +143,18 @@ public class RunnableEQTick extends BukkitRunnable {
     }
 
     private void processCChests() {
+        // Misma duplicidad que en processDChests: una posicion con varios ids entregaba su item
+        // una vez por id en el mismo tick, cobrando el EMC otras tantas veces.
+        Set<Location> vistas = new HashSet<>();
         for (Location location : ConfigMain.getAllCChestLocations(plugin)) {
             if (Utils.isBlockedWorld(plugin, location.getWorld())) {
                 continue;
             }
             if (location.getWorld().isChunkLoaded(location.getBlockX() >> 4, location.getBlockZ() >> 4)) {
+                if (!vistas.add(location)) {
+                    colapsarDuplicados(ConfigMain.getAllCChestIdsStore(plugin, location), location, false);
+                    continue;
+                }
                 Integer storedId = ConfigMain.getCChestIdStore(plugin, location);
                 if (storedId == null) {
                     continue;

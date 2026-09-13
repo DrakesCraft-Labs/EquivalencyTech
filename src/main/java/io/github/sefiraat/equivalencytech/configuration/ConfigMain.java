@@ -596,18 +596,25 @@ public class ConfigMain {
     }
 
     public static List<Location> getAllDChestLocations(EquivalencyTech plugin) {
-        FileConfiguration c = plugin.getConfigMainClass().blockStoreConfig;
-        ConfigurationSection section = c.getConfigurationSection(DIS_CHEST_CFG);
-        List<Location> ids = new ArrayList<>();
-        if (section != null) {
-            for (String s : section.getKeys(false)) {
-                Location location = section.getLocation(s);
-                if (location != null && location.getWorld() != null) {
-                    ids.add(location);
-                }
+        return collectLocations(plugin.getConfigMainClass().blockStoreConfig, DIS_CHEST_CFG);
+    }
+
+    // Devuelve UNA posicion POR ID, no una por bloque: si varios ids reclaman la misma posicion,
+    // esa posicion sale repetida. Quien recorra esta lista para actuar sobre el bloque tiene que
+    // saltarse las repeticiones, o procesara el mismo cofre una vez por duplicado.
+    static List<Location> collectLocations(FileConfiguration c, String seccion) {
+        List<Location> locations = new ArrayList<>();
+        ConfigurationSection section = c.getConfigurationSection(seccion);
+        if (section == null) {
+            return locations;
+        }
+        for (String s : section.getKeys(false)) {
+            Location location = section.getLocation(s);
+            if (location != null && location.getWorld() != null) {
+                locations.add(location);
             }
         }
-        return ids;
+        return locations;
     }
 
     public static Integer getNextCChestID(EquivalencyTech plugin) {
@@ -710,18 +717,7 @@ public class ConfigMain {
     }
 
     public static List<Location> getAllCChestLocations(EquivalencyTech plugin) {
-        FileConfiguration c = plugin.getConfigMainClass().blockStoreConfig;
-        ConfigurationSection section = c.getConfigurationSection(CON_CHEST_CFG);
-        List<Location> ids = new ArrayList<>();
-        if (section != null) {
-            for (String s : section.getKeys(false)) {
-                Location location = section.getLocation(s);
-                if (location != null && location.getWorld() != null) {
-                    ids.add(location);
-                }
-            }
-        }
-        return ids;
+        return collectLocations(plugin.getConfigMainClass().blockStoreConfig, CON_CHEST_CFG);
     }
 
     @Nullable
