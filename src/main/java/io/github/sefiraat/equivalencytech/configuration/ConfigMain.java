@@ -16,6 +16,7 @@ import org.bukkit.inventory.ItemStack;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -521,9 +522,26 @@ public class ConfigMain {
         return nextValue + 1;
     }
 
-    public static void addDChestStore(EquivalencyTech plugin, Location location) {
+    // Devuelve el id recien creado. Antes era void y el llamador tenia que preguntar por la
+    // posicion con getDChestIdStore, que devuelve el PRIMER key coincidente: si la posicion ya
+    // tenia un registro superviviente, el dueño se escribia sobre el id viejo y el id nuevo
+    // nacia sin OWNING_PLAYER. Los registros previos de esa posicion son huerfanos por
+    // definicion (se acaba de colocar un bloque donde no habia cofre), asi que se purgan.
+    public static Integer addDChestStore(EquivalencyTech plugin, Location location) {
         FileConfiguration c = plugin.getConfigMainClass().blockStoreConfig;
-        c.set(DIS_CHEST_CFG + "." + getNextDChestID(plugin).toString(), location);
+        for (Integer stale : getAllDChestIdsStore(plugin, location)) {
+            removeDChestStore(plugin, stale);
+            removeDChest(plugin, stale);
+        }
+        Integer id = getNextDChestID(plugin);
+        c.set(DIS_CHEST_CFG + "." + id.toString(), location);
+        return id;
+    }
+
+    // Todos los ids que reclaman una posicion, de menor a mayor. getDChestIdStore solo ve el
+    // primero, asi que sin esto las rutas de borrado dejaban vivos los duplicados.
+    public static List<Integer> getAllDChestIdsStore(EquivalencyTech plugin, Location location) {
+        return collectIdsAt(plugin.getConfigMainClass().blockStoreConfig, DIS_CHEST_CFG, location);
     }
 
     @Nullable
@@ -603,9 +621,41 @@ public class ConfigMain {
         return nextValue + 1;
     }
 
-    public static void addCChestStore(EquivalencyTech plugin, Location location) {
+    // Mismo criterio que addDChestStore: devolver el id creado y purgar los registros
+    // supervivientes de esa posicion, que son huerfanos por definicion.
+    public static Integer addCChestStore(EquivalencyTech plugin, Location location) {
         FileConfiguration c = plugin.getConfigMainClass().blockStoreConfig;
-        c.set(CON_CHEST_CFG + "." + getNextCChestID(plugin).toString(), location);
+        for (Integer stale : getAllCChestIdsStore(plugin, location)) {
+            removeCChestStore(plugin, stale);
+            removeCChest(plugin, stale);
+        }
+        Integer id = getNextCChestID(plugin);
+        c.set(CON_CHEST_CFG + "." + id.toString(), location);
+        return id;
+    }
+
+    public static List<Integer> getAllCChestIdsStore(EquivalencyTech plugin, Location location) {
+        return collectIdsAt(plugin.getConfigMainClass().blockStoreConfig, CON_CHEST_CFG, location);
+    }
+
+    // Visible en el paquete para que la prueba de regresion pueda ejercitarla sin un servidor.
+    static List<Integer> collectIdsAt(FileConfiguration c, String seccion, Location location) {
+        List<Integer> ids = new ArrayList<>();
+        ConfigurationSection section = c.getConfigurationSection(seccion);
+        if (section == null || location == null) {
+            return ids;
+        }
+        for (String key : section.getKeys(false)) {
+            if (location.equals(section.getLocation(key))) {
+                try {
+                    ids.add(Integer.parseInt(key));
+                } catch (NumberFormatException ignored) {
+                    // Claves que no son ids (basura heredada) no participan.
+                }
+            }
+        }
+        Collections.sort(ids);
+        return ids;
     }
 
     @Nullable

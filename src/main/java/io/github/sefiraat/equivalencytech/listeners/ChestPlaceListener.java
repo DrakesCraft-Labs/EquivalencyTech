@@ -76,16 +76,19 @@ public class ChestPlaceListener implements Listener {
         }
     }
 
+    // El dueño se escribe sobre el id que devuelve addCChestStore, no sobre el que resuelve
+    // getCChestIdStore: ese devuelve el primer key de la posicion y, cuando sobrevivia un
+    // registro anterior, el dueño y LEVEL=1 caian en el id viejo y el nuevo nacia sin dueño.
     private void placeConChest(BlockPlaceEvent e) {
         Location location = e.getBlockPlaced().getLocation();
-        ConfigMain.addCChestStore(plugin, location);
-        ConfigMain.setupCChest(plugin, ConfigMain.getCChestIdStore(plugin, location), e.getPlayer());
+        Integer id = ConfigMain.addCChestStore(plugin, location);
+        ConfigMain.setupCChest(plugin, id, e.getPlayer());
     }
 
     private void placeDisChest(BlockPlaceEvent e) {
         Location location = e.getBlockPlaced().getLocation();
-        ConfigMain.addDChestStore(plugin, location);
-        ConfigMain.setupDChest(plugin, ConfigMain.getDChestIdStore(plugin, location), e.getPlayer());
+        Integer id = ConfigMain.addDChestStore(plugin, location);
+        ConfigMain.setupDChest(plugin, id, e.getPlayer());
     }
 
     // Prioridad HIGHEST con ignoreCancelled: las protecciones (BentoBox rompe en LOW,
@@ -103,7 +106,7 @@ public class ChestPlaceListener implements Listener {
                 // BlockBreakEvent (explosion, WorldEdit, reseteo de isla). Se limpia el
                 // registro muerto en vez de romper con ClassCastException y de seguir
                 // avisando por cada tick. No se cancela: el jugador rompe lo que haya.
-                purgarRegistroHuerfano(location, disID, conID);
+                purgarRegistroHuerfano(location);
                 return;
             }
             e.setCancelled(true);
@@ -115,31 +118,42 @@ public class ChestPlaceListener implements Listener {
                 }
             }
             e.getBlock().setType(Material.AIR);
+            // Un solo drop por cofre roto (el cofre fisico es uno), pero se borran todos los ids
+            // de la posicion: si quedase alguno, la posicion seguiria reclamada y el siguiente
+            // jugador que rompiese un cofre normal ahi recibiria un cofre EMC de regalo.
             if (disID != null) {
                 e.getBlock().getWorld().dropItemNaturally(location, plugin.getEqItems().getDissolutionChest().getItemClone());
-                ConfigMain.removeDChestStore(plugin, disID);
-                ConfigMain.removeDChest(plugin, disID);
+                for (Integer id : ConfigMain.getAllDChestIdsStore(plugin, location)) {
+                    ConfigMain.removeDChestStore(plugin, id);
+                    ConfigMain.removeDChest(plugin, id);
+                }
             }
             if (conID != null) {
                 e.getBlock().getWorld().dropItemNaturally(location, plugin.getEqItems().getCondensatorChest().getItemClone());
-                ConfigMain.removeCChestStore(plugin, conID);
-                ConfigMain.removeCChest(plugin, conID);
+                for (Integer id : ConfigMain.getAllCChestIdsStore(plugin, location)) {
+                    ConfigMain.removeCChestStore(plugin, id);
+                    ConfigMain.removeCChest(plugin, id);
+                }
             }
         }
 
     }
 
-    private void purgarRegistroHuerfano(Location location, Integer disID, Integer conID) {
-        if (disID != null) {
-            ConfigMain.removeDChestStore(plugin, disID);
-            ConfigMain.removeDChest(plugin, disID);
+    // Se purgan TODOS los ids que reclaman la posicion, no solo el primero: borrar uno solo
+    // dejaba vivo al siguiente, que al quedar sin dueño reaparecia como aviso del RunnableEQTick.
+    private void purgarRegistroHuerfano(Location location) {
+        List<Integer> dis = ConfigMain.getAllDChestIdsStore(plugin, location);
+        List<Integer> con = ConfigMain.getAllCChestIdsStore(plugin, location);
+        for (Integer id : dis) {
+            ConfigMain.removeDChestStore(plugin, id);
+            ConfigMain.removeDChest(plugin, id);
         }
-        if (conID != null) {
-            ConfigMain.removeCChestStore(plugin, conID);
-            ConfigMain.removeCChest(plugin, conID);
+        for (Integer id : con) {
+            ConfigMain.removeCChestStore(plugin, id);
+            ConfigMain.removeCChest(plugin, id);
         }
         plugin.getLogger().info(
-            "Registro huerfano de cofre EMC eliminado (dissolution=" + disID + ", condensate=" + conID
+            "Registro huerfano de cofre EMC eliminado (dissolution=" + dis + ", condensate=" + con
                 + ") : el bloque en " + location + " ya no es un cofre.");
     }
 

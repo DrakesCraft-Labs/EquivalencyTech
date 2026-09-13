@@ -14,8 +14,10 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.text.MessageFormat;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 public class RunnableEQTick extends BukkitRunnable {
@@ -63,6 +65,9 @@ public class RunnableEQTick extends BukkitRunnable {
                 int chestId = storedId;
                 String playerUUID = ConfigMain.getOwnerDChest(plugin, chestId);
                 if (playerUUID == null) {
+                    if (colapsarDuplicados(ConfigMain.getAllDChestIdsStore(plugin, location), location, true)) {
+                        continue;
+                    }
                     if (warnedDOwners.add(chestId)) {
                         EquivalencyTech.getInstance().getLogger()
                             .warning(getErrorOrphanOwner("Dissolution", chestId, location, "dissolution_chests.yml"));
@@ -138,6 +143,9 @@ public class RunnableEQTick extends BukkitRunnable {
                 int chestId = storedId;
                 String playerUUID = ConfigMain.getOwnerCChest(plugin, chestId);
                 if (playerUUID == null) {
+                    if (colapsarDuplicados(ConfigMain.getAllCChestIdsStore(plugin, location), location, false)) {
+                        continue;
+                    }
                     if (warnedCOwners.add(chestId)) {
                         EquivalencyTech.getInstance().getLogger()
                             .warning(getErrorOrphanOwner("Condensate", chestId, location, "condensate_chests.yml"));
@@ -174,6 +182,59 @@ public class RunnableEQTick extends BukkitRunnable {
                 }
             }
         }
+    }
+
+    // Saneo de los registros que ya estaban duplicados en disco antes del fix del alta.
+    // Una posicion solo puede pertenecer a un cofre: si varios ids la reclaman, el bueno es el
+    // que conserva OWNING_PLAYER y el resto son fantasmas nacidos de la escritura del dueño en
+    // el id equivocado. Se borran SOLO los sobrantes y nunca el ultimo registro que queda, para
+    // que un cofre real jamas pierda su entrada. Devuelve true si purgo algo, para no avisar de
+    // un id que acaba de desaparecer.
+    private boolean colapsarDuplicados(List<Integer> ids, Location location, boolean dissolution) {
+        if (ids.size() < 2) {
+            return false;
+        }
+        Integer conservado = null;
+        for (Integer id : ids) {
+            String owner = dissolution
+                ? ConfigMain.getOwnerDChest(plugin, id)
+                : ConfigMain.getOwnerCChest(plugin, id);
+            if (owner != null) {
+                conservado = id;
+                break;
+            }
+        }
+        if (conservado == null) {
+            // Ninguno tiene dueño: se conserva el mas bajo para que el aviso siga siendo visible
+            // una sola vez y no se pierda la senal de un cofre realmente sin propietario.
+            conservado = ids.get(0);
+        }
+        List<Integer> purgados = new ArrayList<>();
+        for (Integer id : ids) {
+            if (id.equals(conservado)) {
+                continue;
+            }
+            if (dissolution) {
+                ConfigMain.removeDChestStore(plugin, id);
+                ConfigMain.removeDChest(plugin, id);
+                warnedDOwners.remove(id);
+                warnedDChests.remove(id);
+            } else {
+                ConfigMain.removeCChestStore(plugin, id);
+                ConfigMain.removeCChest(plugin, id);
+                warnedCOwners.remove(id);
+                warnedCChests.remove(id);
+            }
+            purgados.add(id);
+        }
+        if (purgados.isEmpty()) {
+            return false;
+        }
+        EquivalencyTech.getInstance().getLogger().info(
+            "Registros duplicados de cofre EMC eliminados (" + (dissolution ? "dissolution" : "condensate")
+                + "=" + purgados + ", conservado=" + conservado + ") : la posicion " + location
+                + " solo puede pertenecer a un cofre.");
+        return true;
     }
 
     public static String getErrorDissolutionChest(int chestId, Location location) {
