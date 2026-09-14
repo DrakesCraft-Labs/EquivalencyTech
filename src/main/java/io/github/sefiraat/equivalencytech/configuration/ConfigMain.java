@@ -57,6 +57,20 @@ public class ConfigMain {
     private boolean blockStoreReloadPending;
     private long blockStoreSaveWarnedAt;
 
+    private boolean dirtyEmc = false;
+    private boolean dirtyLearned = false;
+    private boolean dirtyBlockStore = false;
+    private boolean dirtyDChest = false;
+    private boolean dirtyCChest = false;
+
+    public void markAllDirty() {
+        dirtyEmc = true;
+        dirtyLearned = true;
+        dirtyBlockStore = true;
+        dirtyDChest = true;
+        dirtyCChest = true;
+    }
+
     public ConfigStrings getStrings() {
         return strings;
     }
@@ -158,8 +172,12 @@ public class ConfigMain {
     }
 
     private void saveLearnedConfig() {
+        if (!dirtyLearned) {
+            return;
+        }
         try {
             learnedItemsConfig.save(learnedItemsConfigFile);
+            dirtyLearned = false;
         } catch (IOException e) {
             plugin.getLogger().warning("Unable to save " + learnedItemsConfigFile.getName());
         }
@@ -180,8 +198,12 @@ public class ConfigMain {
     }
 
     private void saveEmcConfig() {
+        if (!dirtyEmc) {
+            return;
+        }
         try {
             playerEMCConfig.save(playerEMCConfigFile);
+            dirtyEmc = false;
         } catch (IOException e) {
             plugin.getLogger().warning("Unable to save " + playerEMCConfigFile.getName());
         }
@@ -342,6 +364,9 @@ public class ConfigMain {
     }
 
     private void saveBlockStoreConfig() {
+        if (!dirtyBlockStore) {
+            return;
+        }
         if (blockStoreDegraded) {
             // Se guarda en cada autosave, asi que sin freno una sola sesion degradada deja miles
             // de lineas identicas en el log y tapa el resto de la consola.
@@ -358,6 +383,7 @@ public class ConfigMain {
         }
         try {
             blockStoreConfig.save(blockStoreConfigFile);
+            dirtyBlockStore = false;
         } catch (IOException e) {
             plugin.getLogger().warning("Unable to save " + blockStoreConfigFile.getName());
         }
@@ -378,8 +404,12 @@ public class ConfigMain {
     }
 
     private void saveDChestConfig() {
+        if (!dirtyDChest) {
+            return;
+        }
         try {
             dChestConfig.save(dChestConfigFile);
+            dirtyDChest = false;
         } catch (IOException e) {
             plugin.getLogger().warning("Unable to save " + dChestConfigFile.getName());
         }
@@ -400,8 +430,12 @@ public class ConfigMain {
     }
 
     private void saveCChestConfig() {
+        if (!dirtyCChest) {
+            return;
+        }
         try {
             cChestConfig.save(cChestConfigFile);
+            dirtyCChest = false;
         } catch (IOException e) {
             plugin.getLogger().warning("Unable to save " + cChestConfigFile.getName());
         }
@@ -410,11 +444,13 @@ public class ConfigMain {
     public static void addLearnedItem(EquivalencyTech plugin, String uuid, String itemName) {
         FileConfiguration c = plugin.getConfigMainClass().getLearnedItemsConfig();
         c.set(uuid + "." + ChatColor.stripColor(itemName), true);
+        plugin.getConfigMainClass().dirtyLearned = true;
     }
 
     public static void removeLearnedItem(EquivalencyTech plugin, Player player, String itemName) {
         FileConfiguration c = plugin.getConfigMainClass().getLearnedItemsConfig();
         c.set(player.getUniqueId().toString() + "." + itemName, null);
+        plugin.getConfigMainClass().dirtyLearned = true;
     }
 
     public static List<String> getLearnedItems(EquivalencyTech plugin, String uuid) {
@@ -471,11 +507,13 @@ public class ConfigMain {
     public static void setPlayerEmc(EquivalencyTech plugin, Player player, Double emcValue) {
         FileConfiguration c = plugin.getConfigMainClass().getPlayerEMCConfig();
         c.set(player.getUniqueId().toString(), emcValue);
+        plugin.getConfigMainClass().dirtyEmc = true;
     }
 
     public static void setPlayerEmc(EquivalencyTech plugin, String uuid, Double emcValue) {
         FileConfiguration c = plugin.getConfigMainClass().getPlayerEMCConfig();
         c.set(uuid, emcValue);
+        plugin.getConfigMainClass().dirtyEmc = true;
     }
 
     public static double getPlayerEmc(EquivalencyTech plugin, Player player) {
@@ -535,6 +573,7 @@ public class ConfigMain {
         }
         Integer id = getNextDChestID(plugin);
         c.set(DIS_CHEST_CFG + "." + id.toString(), location);
+        plugin.getConfigMainClass().dirtyBlockStore = true;
         return id;
     }
 
@@ -564,6 +603,7 @@ public class ConfigMain {
         ConfigurationSection section = c.getConfigurationSection(DIS_CHEST_CFG);
         if (section != null) {
             section.set(id.toString(), null);
+            plugin.getConfigMainClass().dirtyBlockStore = true;
         }
     }
 
@@ -571,19 +611,29 @@ public class ConfigMain {
         FileConfiguration c = plugin.getConfigMainClass().dChestConfig;
         c.set(id + ".OWNING_PLAYER", player.getUniqueId().toString());
         c.set(id + ".LEVEL", 1);
+        plugin.getConfigMainClass().dirtyDChest = true;
     }
 
     public static void removeDChest(EquivalencyTech plugin, Integer id) {
         FileConfiguration c = plugin.getConfigMainClass().dChestConfig;
         c.set(String.valueOf(id), null);
+        plugin.getConfigMainClass().dirtyDChest = true;
     }
 
     public static boolean isOwnerDChest(EquivalencyTech plugin, Player player, Integer id) {
+        if (player == null || id == null) {
+            return false;
+        }
         FileConfiguration c = plugin.getConfigMainClass().dChestConfig;
-        return c.getString(id + ".OWNING_PLAYER").equals(player.getUniqueId().toString());
+        String owner = c.getString(id + ".OWNING_PLAYER");
+        return player.getUniqueId().toString().equals(owner);
     }
 
+    @Nullable
     public static String getOwnerDChest(EquivalencyTech plugin, Integer id) {
+        if (id == null) {
+            return null;
+        }
         FileConfiguration c = plugin.getConfigMainClass().dChestConfig;
         return c.getString(id + ".OWNING_PLAYER");
     }
@@ -638,6 +688,7 @@ public class ConfigMain {
         }
         Integer id = getNextCChestID(plugin);
         c.set(CON_CHEST_CFG + "." + id.toString(), location);
+        plugin.getConfigMainClass().dirtyBlockStore = true;
         return id;
     }
 
@@ -685,6 +736,7 @@ public class ConfigMain {
         ConfigurationSection section = c.getConfigurationSection(CON_CHEST_CFG);
         if (section != null) {
             section.set(id.toString(), null);
+            plugin.getConfigMainClass().dirtyBlockStore = true;
         }
     }
 
@@ -692,19 +744,29 @@ public class ConfigMain {
         FileConfiguration c = plugin.getConfigMainClass().cChestConfig;
         c.set(id + ".OWNING_PLAYER", player.getUniqueId().toString());
         c.set(id + ".LEVEL", 1);
+        plugin.getConfigMainClass().dirtyCChest = true;
     }
 
     public static void removeCChest(EquivalencyTech plugin, Integer id) {
         FileConfiguration c = plugin.getConfigMainClass().cChestConfig;
         c.set(String.valueOf(id), null);
+        plugin.getConfigMainClass().dirtyCChest = true;
     }
 
     public static boolean isOwnerCChest(EquivalencyTech plugin, Player player, Integer id) {
+        if (player == null || id == null) {
+            return false;
+        }
         FileConfiguration c = plugin.getConfigMainClass().cChestConfig;
-        return c.getString(id + ".OWNING_PLAYER").equals(player.getUniqueId().toString());
+        String owner = c.getString(id + ".OWNING_PLAYER");
+        return player.getUniqueId().toString().equals(owner);
     }
 
+    @Nullable
     public static String getOwnerCChest(EquivalencyTech plugin, Integer id) {
+        if (id == null) {
+            return null;
+        }
         FileConfiguration c = plugin.getConfigMainClass().cChestConfig;
         return c.getString(id + ".OWNING_PLAYER");
     }
@@ -729,6 +791,7 @@ public class ConfigMain {
     public static void setCChestItem(EquivalencyTech plugin, Integer id, ItemStack itemStack) {
         FileConfiguration c = plugin.getConfigMainClass().cChestConfig;
         c.set(id + ".ITEM", itemStack);
+        plugin.getConfigMainClass().dirtyCChest = true;
     }
 
 }

@@ -25,7 +25,7 @@ public class ManagerRunnables {
     private void setupRunnables() {
 
         runnableSave = new RunnableSave(plugin);
-        runnableSave.runTaskTimer(plugin, 0, 100L);
+        runnableSave.runTaskTimer(plugin, 600L, 600L);
 
         runnableEQTick = new RunnableEQTick(plugin);
         runnableEQTick.runTaskTimer(plugin, 0, 20L);

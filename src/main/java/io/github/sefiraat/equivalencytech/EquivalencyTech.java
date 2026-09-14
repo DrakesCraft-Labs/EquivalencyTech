@@ -112,6 +112,7 @@ public class EquivalencyTech extends JavaPlugin {
     @Override
     public void onDisable() {
         saveConfig();
+        configMainClass.markAllDirty();
         configMainClass.saveAdditionalConfigs();
     }
 

@@ -101,7 +101,9 @@ public class RunnableEQTick extends BukkitRunnable {
 
                 Chest chest = (Chest) location.getBlock().getState();
                 Inventory inventory = chest.getBlockInventory();
-                for (ItemStack itemStack : inventory.getContents()) {
+                ItemStack[] contents = inventory.getContents();
+                for (int slot = 0; slot < contents.length; slot++) {
+                    ItemStack itemStack = contents[slot];
                     if (itemStack != null && itemStack.getType() != Material.AIR) {
                         boolean isEQ = ContainerStorage.isCraftable(itemStack, plugin);
                         SlimefunItem sfItem = null;
@@ -133,7 +135,12 @@ public class RunnableEQTick extends BukkitRunnable {
                                 ConfigMain.addLearnedItem(plugin, playerUUID, entryName);
                             }
                             ConfigMain.addPlayerEmc(plugin, playerUUID, emcValue);
-                            itemStack.setAmount(itemStack.getAmount() - 1);
+                            if (itemStack.getAmount() <= 1) {
+                                inventory.setItem(slot, null);
+                            } else {
+                                itemStack.setAmount(itemStack.getAmount() - 1);
+                                inventory.setItem(slot, itemStack);
+                            }
                             break;
                         }
                     }

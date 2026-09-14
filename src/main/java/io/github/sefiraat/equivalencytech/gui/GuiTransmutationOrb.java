@@ -197,8 +197,14 @@ public final class GuiTransmutationOrb implements InventoryHolder {
             ConfigMain.addLearnedItem(plugin, player.getUniqueId().toString(), entryName);
             player.sendMessage(Messages.messageGuiItemLearned(plugin));
         }
-        ConfigMain.addPlayerEmc(plugin, player, emcValue, emcValue * itemStack.getAmount(), itemStack.getAmount());
+        int count = itemStack.getAmount();
+        ConfigMain.addPlayerEmc(plugin, player, emcValue, emcValue * count, count);
         itemStack.setAmount(0);
+        if (shifted) {
+            event.setCurrentItem(null);
+        } else {
+            player.setItemOnCursor(null);
+        }
 
         if (!learned) {
             player.closeInventory();
@@ -260,10 +266,19 @@ public final class GuiTransmutationOrb implements InventoryHolder {
         }
 
         output.setAmount(amount);
-        player.getInventory().addItem(output);
-        double totalEmc = unitEmc * amount;
+        java.util.HashMap<Integer, ItemStack> overflow = player.getInventory().addItem(output);
+        int delivered = amount;
+        if (!overflow.isEmpty()) {
+            int failed = overflow.values().stream().mapToInt(ItemStack::getAmount).sum();
+            delivered -= failed;
+        }
+        if (delivered <= 0) {
+            player.sendMessage(Messages.messageGuiNoSpace(plugin));
+            return;
+        }
+        double totalEmc = unitEmc * delivered;
         ConfigMain.removePlayerEmc(plugin, player, totalEmc);
-        player.sendMessage(Messages.messageGuiEmcRemoved(plugin, player, unitEmc, totalEmc, amount));
+        player.sendMessage(Messages.messageGuiEmcRemoved(plugin, player, unitEmc, totalEmc, delivered));
         render();
     }
 
