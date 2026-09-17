@@ -15,14 +15,108 @@ import org.bukkit.inventory.ItemStack;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.EnumSet;
+import java.util.Locale;
+import java.util.Set;
 
 public class Utils {
+
+    private static final Set<Material> BLACKLISTED_MATERIALS = EnumSet.of(
+            Material.DIAMOND,
+            Material.DIAMOND_BLOCK,
+            Material.DIAMOND_ORE,
+            Material.DEEPSLATE_DIAMOND_ORE,
+            Material.DIAMOND_HELMET,
+            Material.DIAMOND_CHESTPLATE,
+            Material.DIAMOND_LEGGINGS,
+            Material.DIAMOND_BOOTS,
+            Material.DIAMOND_SWORD,
+            Material.DIAMOND_PICKAXE,
+            Material.DIAMOND_AXE,
+            Material.DIAMOND_SHOVEL,
+            Material.DIAMOND_HOE,
+            Material.DIAMOND_HORSE_ARMOR,
+            Material.NETHERITE_INGOT,
+            Material.NETHERITE_BLOCK,
+            Material.NETHERITE_SCRAP,
+            Material.ANCIENT_DEBRIS,
+            Material.NETHERITE_HELMET,
+            Material.NETHERITE_CHESTPLATE,
+            Material.NETHERITE_LEGGINGS,
+            Material.NETHERITE_BOOTS,
+            Material.NETHERITE_SWORD,
+            Material.NETHERITE_PICKAXE,
+            Material.NETHERITE_AXE,
+            Material.NETHERITE_SHOVEL,
+            Material.NETHERITE_HOE,
+            Material.NETHERITE_UPGRADE_SMITHING_TEMPLATE,
+            Material.EMERALD,
+            Material.EMERALD_BLOCK,
+            Material.EMERALD_ORE,
+            Material.DEEPSLATE_EMERALD_ORE,
+            Material.TOTEM_OF_UNDYING,
+            Material.ELYTRA,
+            Material.NETHER_STAR,
+            Material.BEACON,
+            Material.DRAGON_EGG
+    );
+
+    private static final Set<String> BLACKLISTED_SLIMEFUN_IDS = Set.of(
+            "REINFORCED_ALLOY", "REINFORCED_PLATE", "CARBONADO",
+            "BLISTERING_INGOT", "BLISTERING_INGOT_2", "BLISTERING_INGOT_3",
+            "DAMASCUS_STEEL", "DURALUMIN", "CORINTHIAN_BRONZE",
+            "SOLDER_INGOT", "BILLON_INGOT", "REDSTONE_ALLOY",
+            "HARDENED_METAL_INGOT", "ALUMINUM_BRONZE_INGOT", "STEEL_INGOT",
+            "GOLD_24K", "GOLD_22K", "GOLD_20K", "GOLD_18K", "GOLD_16K", "GOLD_14K", "GOLD_12K", "GOLD_10K", "GOLD_8K", "GOLD_6K", "GOLD_4K",
+            "SYNTHETIC_DIAMOND", "SYNTHETIC_EMERALD", "SYNTHETIC_SAPPHIRE",
+            "CARBON", "COMPRESSED_CARBON", "CARBON_CHUNK",
+            "FERROSILICON", "URANIUM", "NEO_URANIUM", "BOOSTED_URANIUM",
+            "REACTOR_COOLANT_CELL", "NETHER_ICE_COOLANT_CELL",
+            "ENDER_LUMP_1", "ENDER_LUMP_2", "ENDER_LUMP_3"
+    );
 
     private Utils() {
         throw new IllegalStateException("Utility class");
     }
 
+    public static boolean isBlacklisted(ItemStack itemStack) {
+        if (itemStack == null || itemStack.getType().isAir()) {
+            return true;
+        }
+        if (BLACKLISTED_MATERIALS.contains(itemStack.getType())) {
+            return true;
+        }
+        try {
+            if (EquivalencyTech.getInstance() != null
+                    && EquivalencyTech.getInstance().getManagerSupportedPlugins() != null
+                    && EquivalencyTech.getInstance().getManagerSupportedPlugins().isInstalledSlimefun()) {
+                SlimefunItem sfItem = SlimefunItem.getByItem(itemStack);
+                if (sfItem != null) {
+                    return isBlacklistedSlimefunId(sfItem.getId());
+                }
+            }
+        } catch (Throwable ignored) {
+        }
+        return false;
+    }
+
+    public static boolean isBlacklistedMaterial(Material material) {
+        return material != null && BLACKLISTED_MATERIALS.contains(material);
+    }
+
+    public static boolean isBlacklistedSlimefunId(String sfId) {
+        if (sfId == null) return false;
+        String id = sfId.toUpperCase(Locale.ROOT);
+        if (BLACKLISTED_SLIMEFUN_IDS.contains(id)) {
+            return true;
+        }
+        return id.contains("INFINITY") || id.contains("SUPREME") || id.contains("QUARRY");
+    }
+
     public static Double getEMC(EquivalencyTech plugin, ItemStack itemStack) {
+        if (isBlacklisted(itemStack)) {
+            return null;
+        }
         SlimefunItem sfItem = null;
         if (EquivalencyTech.getInstance().getManagerSupportedPlugins().isInstalledSlimefun()) {
             sfItem = SlimefunItem.getByItem(itemStack);
@@ -82,6 +176,9 @@ public class Utils {
     }
 
     public static boolean canBeSynth(EquivalencyTech plugin, ItemStack itemStack) {
+        if (isBlacklisted(itemStack)) {
+            return false;
+        }
         if (itemStack.hasItemMeta()) {
             SlimefunItem sfItem = null;
             if (EquivalencyTech.getInstance().getManagerSupportedPlugins().isInstalledSlimefun()) {

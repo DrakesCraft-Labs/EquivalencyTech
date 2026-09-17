@@ -26,8 +26,8 @@ public class Recipes {
         plugin.getServer().addRecipe(Recipes.recipeDarkMatter(plugin));
         plugin.getServer().addRecipe(Recipes.recipeRedMatter(plugin));
         plugin.getServer().addRecipe(Recipes.recipeTransmutationOrb(plugin));
-        plugin.getServer().addRecipe(Recipes.recipeDissolutionChest(plugin));
-        plugin.getServer().addRecipe(Recipes.recipeCondensatorChest(plugin));
+        // plugin.getServer().addRecipe(Recipes.recipeDissolutionChest(plugin));
+        // plugin.getServer().addRecipe(Recipes.recipeCondensatorChest(plugin));
     }
 
     public static Recipe recipeCoal1(EquivalencyTech plugin) {
@@ -296,8 +296,8 @@ public class Recipes {
         recipes.put(recipeDarkMatterCheck(plugin), plugin.getEqItems().getDarkMatter().getItemClone());
         recipes.put(recipeRedMatterCheck(plugin), plugin.getEqItems().getRedMatter().getItemClone());
         recipes.put(recipeTransmutationOrbCheck(plugin), plugin.getEqItems().getTransmutationOrb().getItemClone());
-        recipes.put(recipeDissolutionChestCheck(plugin), plugin.getEqItems().getDissolutionChest().getItemClone());
-        recipes.put(recipeCondensatorChestCheck(plugin), plugin.getEqItems().getCondensatorChest().getItemClone());
+        // recipes.put(recipeDissolutionChestCheck(plugin), plugin.getEqItems().getDissolutionChest().getItemClone());
+        // recipes.put(recipeCondensatorChestCheck(plugin), plugin.getEqItems().getCondensatorChest().getItemClone());
         return recipes;
     }
 

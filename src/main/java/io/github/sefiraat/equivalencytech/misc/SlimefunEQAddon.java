@@ -9,7 +9,6 @@ import com.github.drakescraft_labs.slimefun4.api.items.ItemGroup;
 import com.github.drakescraft_labs.slimefun4.api.items.SlimefunItem;
 import com.github.drakescraft_labs.slimefun4.api.items.SlimefunItemStack;
 import com.github.drakescraft_labs.slimefun4.api.recipes.RecipeType;
-import com.github.drakescraft_labs.slimefun4.libraries.dough.recipes.MinecraftRecipe;
 import net.md_5.bungee.api.ChatColor;
 import org.bukkit.NamespacedKey;
 import org.bukkit.inventory.ItemStack;
@@ -20,20 +19,6 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Collections;
 
-
-/*
- * NOTA SOBRE LAS RECETAS
- *
- * Estos objetos declaraban receta de mesa de trabajo vanilla, pero el addon nunca registraba esa
- * receta en Bukkit: la guia la enseñaba y la mesa no hacia nada. Es lo que reportaron los
- * jugadores como "los crafteos no andan".
- *
- * No se arregla registrando la receta vanilla. Bukkit compara los ingredientes SOLO por material,
- * y aqui la cadena encadena objetos de Slimefun -- el Carbon 2 se hace con Carbon 1 --, asi que
- * una receta vanilla aceptaria carbon normal y se saltaria la progresion entera.
- *
- * La Mesa de Trabajo Mejorada de Slimefun si compara por identificador, que es lo que hace falta.
- */
 public class SlimefunEQAddon implements SlimefunAddon {
 
     private final EquivalencyTech plugin;
@@ -77,13 +62,13 @@ public class SlimefunEQAddon implements SlimefunAddon {
         SlimefunItemStack orbStack = new SlimefunItemStack( "EQ_T_ORB", plugin.getEqItems().getTransmutationOrb().getItemClone());
         SlimefunItem orbItem = new EQSlimefunItem(eqCategory, orbStack, RecipeType.ENHANCED_CRAFTING_TABLE, Recipes.getSFRecipeTransmutationOrb(darkStack, redStack));
         orbItem.register(this);
-        // Dissolution Chest
+        // Dissolution Chest (Desactivada receta pasiva para proteger economia)
         SlimefunItemStack dChestStack = new SlimefunItemStack( "EQ_D_CHEST", plugin.getEqItems().getDissolutionChest().getItemClone());
-        SlimefunItem dChestItem = new EQSlimefunItem(eqCategory, dChestStack, RecipeType.ENHANCED_CRAFTING_TABLE, Recipes.getSFRecipeDissolutionChest(coal2Stack));
+        SlimefunItem dChestItem = new EQSlimefunItem(eqCategory, dChestStack, RecipeType.NULL, new ItemStack[9]);
         dChestItem.register(this);
-        // Condensator Chest
+        // Condensator Chest (Desactivada receta pasiva para proteger economia)
         SlimefunItemStack cChestStack = new SlimefunItemStack( "EQ_C_CHEST", plugin.getEqItems().getCondensatorChest().getItemClone());
-        SlimefunItem cChestItem = new EQSlimefunItem(eqCategory, cChestStack, RecipeType.ENHANCED_CRAFTING_TABLE, Recipes.getSFRecipeCondensatorChest(coal3Stack, dChestStack));
+        SlimefunItem cChestItem = new EQSlimefunItem(eqCategory, cChestStack, RecipeType.NULL, new ItemStack[9]);
         cChestItem.register(this);
     }
 

@@ -25,19 +25,9 @@ public class RunnableEQTick extends BukkitRunnable {
     public final EquivalencyTech plugin;
     public final boolean sf;
 
-    // Este runnable corre cada 20 ticks (1 vez por segundo) en el hilo principal. El aviso de
-    // cofre huerfano se emitia en CADA pasada por cada cofre cuyo chunk estuviera cargado: los
-    // 8 cofres huerfanos de laboratorio produjeron 368 lineas en 50 s, ~28.800 por hora mientras
-    // esos chunks siguieran cargados. Se recuerda que ID ya fue avisado y se vuelve a permitir el
-    // aviso solo cuando el cofre se restaura, para no perder la senal si el problema reaparece.
     private final Set<Integer> warnedDChests = new HashSet<>();
     private final Set<Integer> warnedCChests = new HashSet<>();
 
-    // getOwnerDChest/getOwnerCChest leen OWNING_PLAYER del yml de cofres y devuelven null cuando
-    // ese registro se perdio pero la posicion sigue en blockstore.yml (la misma desincronizacion
-    // que ya obligo a filtrar los mundos que cargan tarde). Con el uuid a null, getLearnedItems y
-    // getPlayerEmc acaban llamando a FileConfiguration.contains(null), que lanza IllegalArgumentException:
-    // al ocurrir dentro de este runnable de 20 ticks, se repetiria cada segundo en el hilo principal.
     private final Set<Integer> warnedDOwners = new HashSet<>();
     private final Set<Integer> warnedCOwners = new HashSet<>();
 
@@ -53,13 +43,6 @@ public class RunnableEQTick extends BukkitRunnable {
     }
 
     private void processDChests() {
-        // getAllDChestLocations devuelve UNA posicion POR ID, asi que una posicion reclamada por
-        // varios ids entra varias veces en esta vuelta; como getDChestIdStore siempre resuelve al
-        // PRIMER id, el mismo cofre se procesaba una vez por duplicado en el mismo tick (un cofre
-        // con 5 ids consumia 5 items por segundo y acreditaba 5 veces su EMC). La repeticion
-        // dentro de la propia vuelta es la senal de duplicado, y ademas alcanza los casos que el
-        // saneo perezoso no veia: colapsarDuplicados solo se invocaba cuando el id resuelto no
-        // tenia dueño, y en estas posiciones el primer id si lo tiene.
         Set<Location> vistas = new HashSet<>();
         for (Location location : ConfigMain.getAllDChestLocations(plugin)) {
             if (Utils.isBlockedWorld(plugin, location.getWorld())) {
@@ -111,18 +94,15 @@ public class RunnableEQTick extends BukkitRunnable {
                             sfItem = SlimefunItem.getByItem(itemStack);
                         }
                         Material material = itemStack.getType();
-                        // getEMC devuelve el valor de un mapa, asi que es null para cualquier objeto
-                        // sin EMC definido. Antes se dividia entre 100 sin comprobarlo: el
-                        // desempaquetado del Double lanzaba NullPointerException y, como esto corre en
-                        // cada tick sobre el contenido de los cofres, el fallo se repetia sin parar --
-                        // 12.867 veces en un solo arranque, en el hilo principal. El guard de abajo
-                        // llegaba tarde: la excepcion saltaba antes, al hacer la cuenta.
+
                         Double emcBase = Utils.getEMC(plugin, itemStack);
                         if (emcBase == null) {
                             continue;
                         }
-                        Double emcValue = Utils.roundDown((emcBase / 100) * 150, 2);
-                        if (emcValue != null && Utils.canBeSynth(plugin, itemStack)) {
+                        // Ley de Entropia (Infinity Tier): se pierde el 50% al disolver (0.50x),
+                        // impidiendo bucles y granjas infinitas de conversion.
+                        Double emcValue = Utils.roundDown(emcBase * 0.50, 2);
+                        if (emcValue != null && emcValue > 0 && Utils.canBeSynth(plugin, itemStack)) {
                             String entryName;
                             if (isEQ) {
                                 entryName = Utils.eqNameConfig(itemStack.getItemMeta().getDisplayName());
@@ -150,8 +130,6 @@ public class RunnableEQTick extends BukkitRunnable {
     }
 
     private void processCChests() {
-        // Misma duplicidad que en processDChests: una posicion con varios ids entregaba su item
-        // una vez por id en el mismo tick, cobrando el EMC otras tantas veces.
         Set<Location> vistas = new HashSet<>();
         for (Location location : ConfigMain.getAllCChestLocations(plugin)) {
             if (Utils.isBlockedWorld(plugin, location.getWorld())) {
@@ -196,12 +174,14 @@ public class RunnableEQTick extends BukkitRunnable {
                 ItemStack itemStack = ConfigMain.getCChestItem(plugin, chestId);
                 if (itemStack != null) {
                     Double emcValue = Utils.getEMC(plugin, itemStack);
-                    if (emcValue != null) {
+                    if (emcValue != null && emcValue > 0) {
+                        // Sintesis pasiva en cofre requiere recargo del +50% de EMC (1.50x) segun el lore oficial
+                        Double requiredEmc = Utils.roundDown(emcValue * 1.50, 2);
                         Double playerEmc = ConfigMain.getPlayerEmc(plugin, playerUUID);
-                        if (playerEmc >= emcValue) {
+                        if (playerEmc >= requiredEmc) {
                             HashMap<Integer, ItemStack> failed = inventory.addItem(itemStack);
                             if (failed.isEmpty()) {
-                                ConfigMain.removePlayerEmc(plugin, playerUUID, emcValue);
+                                ConfigMain.removePlayerEmc(plugin, playerUUID, requiredEmc);
                             }
                         }
                     }
@@ -210,12 +190,6 @@ public class RunnableEQTick extends BukkitRunnable {
         }
     }
 
-    // Saneo de los registros que ya estaban duplicados en disco antes del fix del alta.
-    // Una posicion solo puede pertenecer a un cofre: si varios ids la reclaman, el bueno es el
-    // que conserva OWNING_PLAYER y el resto son fantasmas nacidos de la escritura del dueño en
-    // el id equivocado. Se borran SOLO los sobrantes y nunca el ultimo registro que queda, para
-    // que un cofre real jamas pierda su entrada. Devuelve true si purgo algo, para no avisar de
-    // un id que acaba de desaparecer.
     private boolean colapsarDuplicados(List<Integer> ids, Location location, boolean dissolution) {
         if (ids.size() < 2) {
             return false;
@@ -231,8 +205,6 @@ public class RunnableEQTick extends BukkitRunnable {
             }
         }
         if (conservado == null) {
-            // Ninguno tiene dueño: se conserva el mas bajo para que el aviso siga siendo visible
-            // una sola vez y no se pierda la senal de un cofre realmente sin propietario.
             conservado = ids.get(0);
         }
         List<Integer> purgados = new ArrayList<>();

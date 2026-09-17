@@ -57,9 +57,6 @@ public class CraftListener implements Listener {
             } else if (contentLayer.equals(Recipes.recipeTransmutationOrbCheck(plugin))) {
                 e.getInventory().setResult(plugin.getEqItems().getTransmutationOrb().getItemClone());
 
-            } else if (contentLayer.equals(Recipes.recipeDissolutionChestCheck(plugin))) {
-                    e.getInventory().setResult(plugin.getEqItems().getDissolutionChest().getItemClone());
-
             } else if (contentsEQ(contentLayer)) {
                 e.getInventory().setResult(new ItemStack(Material.AIR));
             }

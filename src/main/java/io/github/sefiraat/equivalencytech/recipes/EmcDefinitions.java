@@ -1,6 +1,7 @@
 package io.github.sefiraat.equivalencytech.recipes;
 
 import io.github.sefiraat.equivalencytech.EquivalencyTech;
+import io.github.sefiraat.equivalencytech.misc.Utils;
 import io.github.sefiraat.equivalencytech.statics.ContainerStorage;
 import io.github.sefiraat.equivalencytech.statics.DebugLogs;
 import com.github.drakescraft_labs.slimefun4.api.items.SlimefunItem;
@@ -45,16 +46,6 @@ public class EmcDefinitions {
         return emcSlimefun;
     }
 
-    /**
-     * Sólo lo barato. El recorrido de los objetos de Slimefun se hace después de arrancar.
-     *
-     * POR QUE
-     *
-     * fillSlimefun recorre los ~15.000 objetos registrados resolviendo recetas de forma
-     * recursiva. Tarda unos 57 segundos cuando sale bien, y el 14-08-2026 no salió bien: dejó el
-     * servidor tres horas sin terminar de arrancar, sin un solo error en el log. Nada de esto
-     * hace falta para que la gente pueda entrar a jugar.
-     */
     public EmcDefinitions(EquivalencyTech plugin) {
         fillBase(plugin);
         fillSpecialCases();
@@ -62,16 +53,6 @@ public class EmcDefinitions {
         fillEQItems(plugin);
     }
 
-    /**
-     * Calcula el EMC de los objetos de Slimefun repartido entre ticks, ya con el servidor arriba.
-     *
-     * Se hace en el hilo principal y no en uno aparte porque por el camino se consulta el
-     * registro de recetas de Bukkit, que no es seguro tocar desde fuera. Repartirlo en tandas
-     * pequeñas deja el mismo resultado sin que ningún tick se note.
-     *
-     * Mientras termina, un objeto todavía sin calcular se comporta como uno sin valor de EMC,
-     * que es exactamente lo que ya pasaba con los objetos desconocidos.
-     */
     public void calcularSlimefunPorTandas(EquivalencyTech plugin) {
         if (!EquivalencyTech.getInstance().getManagerSupportedPlugins().isInstalledSlimefun()) {
             return;
@@ -79,6 +60,9 @@ public class EmcDefinitions {
         final java.util.List<SlimefunItem> pendientes = new java.util.ArrayList<>();
         for (SlimefunItem item : Slimefun.getRegistry().getEnabledSlimefunItems()) {
             if (item instanceof SlimefunBackpack || !item.getAddon().getName().equals("Slimefun")) {
+                continue;
+            }
+            if (Utils.isBlacklistedSlimefunId(item.getId())) {
                 continue;
             }
             pendientes.add(item);
@@ -99,7 +83,6 @@ public class EmcDefinitions {
                         emcSlimefun.put(item.getId(), roundDown(emcValue, 2));
                     }
                 } catch (Exception | StackOverflowError e) {
-                    // Un objeto con una receta rara no debe llevarse por delante el resto.
                     plugin.getLogger().warning("EMC de " + item.getId() + " no se pudo calcular: "
                             + e.getClass().getSimpleName());
                 }
@@ -116,39 +99,38 @@ public class EmcDefinitions {
     private void fillBase(EquivalencyTech plugin) {
         Map<String, Double> h = plugin.getConfigMainClass().getEmc().getEmcBaseValues();
         for (Map.Entry<String, Double> entry : h.entrySet()) {
-            if (Material.matchMaterial(entry.getKey()) == null) {
+            Material mat = Material.matchMaterial(entry.getKey());
+            if (mat == null || Utils.isBlacklistedMaterial(mat)) {
                 continue;
             }
-            emcBase.put(Material.matchMaterial(entry.getKey()), entry.getValue());
+            emcBase.put(mat, entry.getValue());
             DebugLogs.logEmcBaseValueLoaded(plugin, entry.getKey(), entry.getValue());
         }
         Map<String, Double> slimefunBase = plugin.getConfigMainClass().getEmc().getEmcSlimefunValues();
         for (Map.Entry<String, Double> entry : slimefunBase.entrySet()) {
+            if (Utils.isBlacklistedSlimefunId(entry.getKey())) {
+                continue;
+            }
             emcSFBase.put(entry.getKey(), entry.getValue());
             DebugLogs.logEmcBaseValueLoaded(plugin, entry.getKey(), entry.getValue());
         }
     }
 
     private void fillSpecialCases() {
-        // Used to escape loops where the item isn't BASe but also has a reversing craft.
-        emcExtended.put(Material.NETHERITE_INGOT, specialCaseNetheriteIngot());
         emcExtended.put(Material.DRIED_KELP, specialCaseDriedKelp());
         emcExtended.put(Material.BONE_MEAL, specialCaseBoneMeal());
     }
 
-    private Double specialCaseNetheriteIngot() {
-        return (emcBase.get(Material.GOLD_INGOT) * 4) + (emcBase.get(Material.NETHERITE_SCRAP) * 4);
-    }
     private Double specialCaseDriedKelp() {
         return emcBase.get(Material.KELP);
     }
     private Double specialCaseBoneMeal() {
-        return emcBase.get(Material.BONE) / 3;
+        return emcBase.get(Material.BONE) != null ? emcBase.get(Material.BONE) / 3 : null;
     }
 
     private void fillExtended(EquivalencyTech plugin) {
         for (Material m : Material.values()) {
-            if (!m.isLegacy() && m.isItem()) {
+            if (!m.isLegacy() && m.isItem() && !Utils.isBlacklistedMaterial(m)) {
                 ItemStack i = new ItemStack(m);
                 Double emcValue = getEmcValue(plugin, i, 1);
                 if (emcValue != null) {
@@ -164,6 +146,7 @@ public class EmcDefinitions {
     private void fillEQItems(EquivalencyTech plugin) {
         for (Map.Entry<List<ItemStack>, ItemStack> recipeMap : Recipes.getEQRecipes(plugin).entrySet()) {
             ItemStack checkedItem = recipeMap.getValue();
+            if (checkedItem == null || checkedItem.getItemMeta() == null) continue;
             DebugLogs.logBoring(plugin, checkedItem.getItemMeta().getDisplayName());
             Double itemAmount = 0D;
             for (ItemStack recipeItem : recipeMap.getKey()) {
@@ -177,39 +160,11 @@ public class EmcDefinitions {
         }
     }
 
-    private void fillSlimefun(EquivalencyTech plugin) {
-        if (EquivalencyTech.getInstance().getManagerSupportedPlugins().isInstalledSlimefun()) {
-            for (SlimefunItem item : Slimefun.getRegistry().getEnabledSlimefunItems()) {
-                if (item instanceof SlimefunBackpack || !item.getAddon().getName().equals("Slimefun")) {
-                    continue;
-                }
-                DebugLogs.logBoring(plugin, item.getId() + " being checked");
-                Double emcValue = getSFEmcValue(plugin, item.getItem(), 1);
-                if (emcValue != null && emcValue != 0D) {
-                    DebugLogs.logEmcPosted(plugin, emcValue, 1);
-                    emcSlimefun.put(item.getId(), roundDown(emcValue,2));
-                } else {
-                    DebugLogs.logEmcNull(plugin, 1);
-                }
-            }
-        }
-    }
-
-    /**
-     * Objetos que se están resolviendo ahora mismo, más arriba en la recursión.
-     *
-     * Sin esto, dos objetos cuyas recetas se necesiten mutuamente se llaman el uno al otro sin
-     * fin: el parámetro nestLevel que traía el código sólo servía para indentar el log, no
-     * frenaba nada. Y como sólo se memoriza lo ya terminado, un grafo de recetas en diamante
-     * además se recorre una y otra vez.
-     */
     private final java.util.Set<String> enCurso = new java.util.HashSet<>();
-
-    /** Tope de profundidad, por si aparece una cadena larguísima sin llegar a ser un ciclo. */
     private static final int PROFUNDIDAD_MAXIMA = 32;
 
     private Double getSFEmcValue(EquivalencyTech plugin, ItemStack item, Integer nestLevel) {
-        if (nestLevel > PROFUNDIDAD_MAXIMA) {
+        if (item == null || Utils.isBlacklisted(item) || nestLevel > PROFUNDIDAD_MAXIMA) {
             return null;
         }
         SlimefunItem sfItem = SlimefunItem.getByItem(item);
@@ -217,10 +172,13 @@ public class EmcDefinitions {
             DebugLogs.logBoring(plugin, item.getType().toString() + StringUtils.repeat(" >", nestLevel) + " Vanilla - getting found vanilla value");
             return getEmcValue(plugin, item, nestLevel + 1);
         }
+        if (Utils.isBlacklistedSlimefunId(sfItem.getId())) {
+            return null;
+        }
         if (emcSFBase.containsKey(sfItem.getId())) {
             DebugLogs.logBoring(plugin, sfItem.getId() + StringUtils.repeat(" >", nestLevel) + " Item in SF Base");
             Double emcBaseValue = emcSFBase.get(sfItem.getId());
-            if (emcBaseValue == 0) {
+            if (emcBaseValue == null || emcBaseValue == 0) {
                 DebugLogs.logBoring(plugin, sfItem.getId() + StringUtils.repeat(" >", nestLevel) + " Zero base val");
                 return null;
             } else {
@@ -228,7 +186,7 @@ public class EmcDefinitions {
                 return emcBaseValue;
             }
         }
-        if (emcSlimefun.containsKey(sfItem.getId())) { // Is Slimefun and already calculated
+        if (emcSlimefun.containsKey(sfItem.getId())) {
             DebugLogs.logBoring(plugin, sfItem.getId() + StringUtils.repeat(" >", nestLevel) + " Already calculated at : " + emcSlimefun.get(sfItem.getId()));
             return emcSlimefun.get(sfItem.getId());
         }
@@ -238,28 +196,26 @@ public class EmcDefinitions {
             DebugLogs.logBoring(plugin, sfItem.getId() + StringUtils.repeat(" >", nestLevel) + " Not in base and no recipes. Nulling out.");
             return null;
         }
-        // Si este objeto ya se esta resolviendo mas arriba, su receta depende de si mismo. Se
-        // corta devolviendo null en vez de volver a entrar: sin esto la pareja se llama sin fin.
         if (!enCurso.add(sfItem.getId())) {
             return null;
         }
         try {
-        for (ItemStack recipeItem : recipe) {
-            if (recipeItem != null) {
-                DebugLogs.logBoring(plugin, sfItem.getId() + StringUtils.repeat(" >", nestLevel) + " Checking recipe item");
-                Double stackAmount = getSFEmcValue(plugin, recipeItem, nestLevel + 1);
-                if (stackAmount == null) {
-                    DebugLogs.logBoring(plugin, sfItem.getId() + StringUtils.repeat(" >", nestLevel) + " Null");
-                    return null;
+            for (ItemStack recipeItem : recipe) {
+                if (recipeItem != null) {
+                    DebugLogs.logBoring(plugin, sfItem.getId() + StringUtils.repeat(" >", nestLevel) + " Checking recipe item");
+                    Double stackAmount = getSFEmcValue(plugin, recipeItem, nestLevel + 1);
+                    if (stackAmount == null) {
+                        DebugLogs.logBoring(plugin, sfItem.getId() + StringUtils.repeat(" >", nestLevel) + " Null");
+                        return null;
+                    }
+                    amount += (stackAmount / sfItem.getRecipeOutput().getAmount());
                 }
-                amount += (stackAmount / sfItem.getRecipeOutput().getAmount());
             }
-        }
-        if (amount == 0D) {
-            DebugLogs.logBoring(plugin, sfItem.getId() + StringUtils.repeat(" >", nestLevel) + " Stack is null due to 0. If base items is missing?");
-            return null;
-        }
-        return amount;
+            if (amount == 0D) {
+                DebugLogs.logBoring(plugin, sfItem.getId() + StringUtils.repeat(" >", nestLevel) + " Stack is null due to 0. If base items is missing?");
+                return null;
+            }
+            return amount;
         } finally {
             enCurso.remove(sfItem.getId());
         }
@@ -268,6 +224,9 @@ public class EmcDefinitions {
     @Nullable
     private Double getEQEmcValue(EquivalencyTech plugin, ItemStack itemStack, Integer nestLevel) {
         if (itemStack != null) {
+            if (Utils.isBlacklisted(itemStack)) {
+                return null;
+            }
             DebugLogs.logEQStart(plugin, nestLevel, itemStack);
             if (ContainerStorage.isCraftable(itemStack, plugin)) {
                 double amount = 0D;
@@ -301,33 +260,31 @@ public class EmcDefinitions {
 
     @Nullable
     private Double getEmcValue(EquivalencyTech plugin, ItemStack i, Integer nestLevel) {
+        if (i == null || Utils.isBlacklisted(i)) {
+            return null;
+        }
         List<Recipe> recipeList = Bukkit.getServer().getRecipesFor(i);
         Material m = i.getType();
         Double eVal = 0D;
         DebugLogs.logEmcTestingItemStack(plugin, i.getType().name(), nestLevel);
         if (nestLevel > 15) {
-            // Recipe is most likely looping and should abort. Need a better method
             return null;
         }
         if (emcBase.containsKey(m)) {
-            // Item is in the base list (config.yml) draw from there first
             Double emcBaseValue = emcBase.get(m);
-            if (emcBaseValue == 0) {
+            if (emcBaseValue == null || emcBaseValue == 0) {
                 return null;
             } else {
                 DebugLogs.logEmcIsBase(plugin, emcBaseValue, nestLevel);
                 return emcBaseValue;
             }
         } else if (emcExtended.containsKey(m)) {
-            // Item is in the extended list (already registered during fillExtended)
             DebugLogs.logEmcIsRegisteredExtended(plugin, emcExtended.get(m), nestLevel);
             return emcExtended.get(m);
         } else if (recipeList.isEmpty()) {
-            // Recipe is not in Base and has no recipes, so it cannot be EMC'd
             DebugLogs.logEmcNoRecipes(plugin, nestLevel);
             return null;
         } else {
-            // Item not yet registered but DOES have valid recipes, lets check them out!
             for (Recipe r : Bukkit.getServer().getRecipesFor(i)) {
                 Double tempVal = checkRecipe(plugin, r,nestLevel + 1);
                 if (tempVal != null && (eVal.equals(0D) || tempVal < eVal)) {
@@ -350,31 +307,25 @@ public class EmcDefinitions {
 
     @Nullable
     private Double checkRecipe(EquivalencyTech plugin, Recipe recipe, Integer nestLevel) {
-
         DebugLogs.logCheckingRecipe(plugin, nestLevel);
 
         if (recipe instanceof ShapedRecipe) {
-            ShapedRecipe shapedRecipe = (ShapedRecipe) recipe;
-            return checkShaped(plugin, shapedRecipe, nestLevel);
+            return checkShaped(plugin, (ShapedRecipe) recipe, nestLevel);
         } else if (recipe instanceof ShapelessRecipe) {
-            ShapelessRecipe shapelessRecipe = (ShapelessRecipe) recipe;
-            return checkShapeless(plugin, shapelessRecipe, nestLevel);
+            return checkShapeless(plugin, (ShapelessRecipe) recipe, nestLevel);
         } else if (recipe instanceof FurnaceRecipe) {
-            FurnaceRecipe furnaceRecipe = (FurnaceRecipe) recipe;
-            return checkFurnace(plugin, furnaceRecipe, nestLevel);
+            return checkFurnace(plugin, (FurnaceRecipe) recipe, nestLevel);
         } else if (recipe instanceof StonecuttingRecipe) {
-            StonecuttingRecipe stonecuttingRecipe = (StonecuttingRecipe) recipe;
-            return checkStoneCutter(plugin, stonecuttingRecipe, nestLevel);
+            return checkStoneCutter(plugin, (StonecuttingRecipe) recipe, nestLevel);
         } else if (recipe instanceof SmithingRecipe) {
-            SmithingRecipe smithingRecipe = (SmithingRecipe) recipe;
-            return checkSmithing(plugin, smithingRecipe, nestLevel);
+            return checkSmithing(plugin, (SmithingRecipe) recipe, nestLevel);
         }
 
         return null;
     }
 
     @Nullable
-    private  Double checkShaped(EquivalencyTech plugin, ShapedRecipe recipe, int nestLevel) {
+    private Double checkShaped(EquivalencyTech plugin, ShapedRecipe recipe, int nestLevel) {
         DebugLogs.logRecipeType(plugin, "Shaped", nestLevel);
         double eVal= 0D;
         for (ItemStack i2 : recipe.getIngredientMap().values()) {
@@ -403,8 +354,7 @@ public class EmcDefinitions {
         DebugLogs.logRecipeType(plugin, "Shapeless", nestLevel);
         Double eVal = 0D;
         for (ItemStack i2 : recipe.getIngredientList()) {
-            Double prVal;
-            prVal = getEmcValue(plugin, i2, nestLevel + 1);
+            Double prVal = getEmcValue(plugin, i2, nestLevel + 1);
             if (prVal != null) {
                 if (recipe.getResult().getAmount() > 1) {
                     DebugLogs.logRecipeMultipleOutputs(plugin, prVal, recipe.getResult().getAmount(), nestLevel);
@@ -422,8 +372,7 @@ public class EmcDefinitions {
     @Nullable
     private Double checkFurnace(EquivalencyTech plugin, FurnaceRecipe recipe, int nestLevel) {
         DebugLogs.logRecipeType(plugin, "Furnace", nestLevel);
-        Double prVal;
-        prVal = getEmcValue(plugin, recipe.getInput(), nestLevel + 1);
+        Double prVal = getEmcValue(plugin, recipe.getInput(), nestLevel + 1);
         if (prVal != null) {
             if (recipe.getResult().getAmount() > 1) {
                 DebugLogs.logRecipeMultipleOutputs(plugin, prVal, recipe.getResult().getAmount(), nestLevel);
@@ -439,8 +388,7 @@ public class EmcDefinitions {
     @Nullable
     private Double checkStoneCutter(EquivalencyTech plugin, StonecuttingRecipe recipe, int nestLevel) {
         DebugLogs.logRecipeType(plugin, "Stonecutting", nestLevel);
-        Double prVal;
-        prVal = getEmcValue(plugin, recipe.getInput(), nestLevel + 1);
+        Double prVal = getEmcValue(plugin, recipe.getInput(), nestLevel + 1);
         if (prVal != null) {
             if (recipe.getResult().getAmount() > 1) {
                 DebugLogs.logRecipeMultipleOutputs(plugin, prVal, recipe.getResult().getAmount(), nestLevel);
@@ -456,10 +404,8 @@ public class EmcDefinitions {
     @Nullable
     private Double checkSmithing(EquivalencyTech plugin, SmithingRecipe recipe, int nestLevel) {
         DebugLogs.logRecipeType(plugin, "Smithing", nestLevel);
-        Double baseVal;
-        Double additionVal;
-        baseVal = getEmcValue(plugin, recipe.getBase().getItemStack(), nestLevel + 1);
-        additionVal = getEmcValue(plugin, recipe.getAddition().getItemStack(), nestLevel + 1);
+        Double baseVal = getEmcValue(plugin, recipe.getBase().getItemStack(), nestLevel + 1);
+        Double additionVal = getEmcValue(plugin, recipe.getAddition().getItemStack(), nestLevel + 1);
         if (baseVal != null && additionVal != null) {
             double combinedVal = (baseVal + additionVal);
             if (recipe.getResult().getAmount() > 1) {
@@ -475,6 +421,9 @@ public class EmcDefinitions {
 
     @Nullable
     public Double getEmcValue(Material material) {
+        if (Utils.isBlacklistedMaterial(material)) {
+            return null;
+        }
         if (emcExtended.containsKey(material)) {
             return emcExtended.get(material);
         }
