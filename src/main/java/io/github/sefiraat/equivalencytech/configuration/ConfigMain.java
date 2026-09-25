@@ -16,6 +16,10 @@ import org.bukkit.inventory.ItemStack;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 import java.util.ArrayList;
 import java.util.List;
@@ -152,6 +156,35 @@ public class ConfigMain {
     public void saveAdditionalConfigs() {
         saveEmcConfig();
         saveLearnedConfig();
+        saveBlockStoreConfig();
+        saveDChestConfig();
+        saveCChestConfig();
+    }
+
+    /**
+     * Persiste una migracion manual de registros de cofres. La migracion crea su propio punto de
+     * retorno antes de tocar los tres indices, por lo que nunca depende de que un operador haya
+     * copiado a mano solo uno de ellos.
+     *
+     * @return etiqueta comun de los tres respaldos creados.
+     * @throws IOException si no se pudo crear algun respaldo; en ese caso no se debe mutar nada.
+     */
+    public String backupChestStoresForMigration() throws IOException {
+        String tag = "backup-pre-chest-migration-"
+            + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"));
+        backupMigrationFile(blockStoreConfigFile, tag);
+        backupMigrationFile(dChestConfigFile, tag);
+        backupMigrationFile(cChestConfigFile, tag);
+        return tag;
+    }
+
+    private static void backupMigrationFile(File source, String tag) throws IOException {
+        Files.copy(source.toPath(), new File(source.getParentFile(), source.getName() + "." + tag).toPath(),
+            StandardCopyOption.COPY_ATTRIBUTES);
+    }
+
+    /** Guarda exclusivamente los tres almacenes que una migracion de cofres puede modificar. */
+    public void saveChestMigration() {
         saveBlockStoreConfig();
         saveDChestConfig();
         saveCChestConfig();
@@ -649,6 +682,11 @@ public class ConfigMain {
         return collectLocations(plugin.getConfigMainClass().blockStoreConfig, DIS_CHEST_CFG);
     }
 
+    /** IDs de dissolution_chests que aun tienen una ubicacion serializada. */
+    public static List<Integer> getDChestIds(EquivalencyTech plugin) {
+        return collectIds(plugin.getConfigMainClass().blockStoreConfig, DIS_CHEST_CFG);
+    }
+
     // Devuelve UNA posicion POR ID, no una por bloque: si varios ids reclaman la misma posicion,
     // esa posicion sale repetida. Quien recorra esta lista para actuar sobre el bloque tiene que
     // saltarse las repeticiones, o procesara el mismo cofre una vez por duplicado.
@@ -710,6 +748,23 @@ public class ConfigMain {
                 } catch (NumberFormatException ignored) {
                     // Claves que no son ids (basura heredada) no participan.
                 }
+            }
+        }
+        Collections.sort(ids);
+        return ids;
+    }
+
+    static List<Integer> collectIds(FileConfiguration c, String seccion) {
+        List<Integer> ids = new ArrayList<>();
+        ConfigurationSection section = c.getConfigurationSection(seccion);
+        if (section == null) {
+            return ids;
+        }
+        for (String key : section.getKeys(false)) {
+            try {
+                ids.add(Integer.parseInt(key));
+            } catch (NumberFormatException ignored) {
+                // Basura heredada: una migracion no debe intentar reinterpretarla como un id.
             }
         }
         Collections.sort(ids);
@@ -780,6 +835,11 @@ public class ConfigMain {
 
     public static List<Location> getAllCChestLocations(EquivalencyTech plugin) {
         return collectLocations(plugin.getConfigMainClass().blockStoreConfig, CON_CHEST_CFG);
+    }
+
+    /** IDs de condensate_chests que aun tienen una ubicacion serializada. */
+    public static List<Integer> getCChestIds(EquivalencyTech plugin) {
+        return collectIds(plugin.getConfigMainClass().blockStoreConfig, CON_CHEST_CFG);
     }
 
     @Nullable

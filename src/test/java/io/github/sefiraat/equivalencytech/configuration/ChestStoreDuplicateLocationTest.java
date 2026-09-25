@@ -66,6 +66,16 @@ class ChestStoreDuplicateLocationTest {
     }
 
     @Test
+    void elInventarioDeMigracionSoloExponeIdsNumericosOrdenados() {
+        YamlConfiguration c = new YamlConfiguration();
+        c.set(SECCION + ".19", new Location(null, 10.0, 64.0, 20.0));
+        c.set(SECCION + ".legado", new Location(null, 11.0, 64.0, 20.0));
+        c.set(SECCION + ".2", new Location(null, 12.0, 64.0, 20.0));
+
+        assertEquals(List.of(2, 19), ConfigMain.collectIds(c, SECCION));
+    }
+
+    @Test
     void elAltaDevuelveElIdCreadoParaQueElDuenoNoCaigaEnElIdViejo() throws NoSuchMethodException {
         // El defecto original era de tipos: addDChestStore era void y el llamador tenia que
         // preguntar por la posicion, obteniendo el primer id en vez del recien creado.
