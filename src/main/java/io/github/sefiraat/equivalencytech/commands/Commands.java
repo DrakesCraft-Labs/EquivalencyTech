@@ -53,27 +53,21 @@ public class Commands extends BaseCommand {
                     sfItem = SlimefunItem.getByItem(i);
                 }
                 if (sfItem != null) {
-                    if (plugin.getEmcDefinitions().getEmcSlimefun().containsKey(sfItem.getId())) {
-                        player.sendMessage(Messages.msgCmdEmcDisplay(sfItem.getId(), Utils.getEMC(plugin, i)));
-                        player.sendMessage(Messages.msgCmdEmcDisplayStack(sfItem.getId(), i.getAmount(), Utils.getEMC(plugin, i) * i.getAmount()));
+                    Double val = Utils.getEMC(plugin, i);
+                    if (val != null) {
+                        player.sendMessage(Messages.msgCmdEmcDisplay(sfItem.getId(), val));
+                        player.sendMessage(Messages.msgCmdEmcDisplayStack(sfItem.getId(), i.getAmount(), val * i.getAmount()));
                     } else {
                         player.sendMessage(Messages.msgCmdEmcNone(plugin));
                     }
                     return;
                 }
                 if (i.getType() != Material.AIR) {
-                    if (ContainerStorage.isCraftable(i, plugin)) {
-                        if (plugin.getEmcDefinitions().getEmcEQ().containsKey(i.getItemMeta().getDisplayName())) {
-                            player.sendMessage(Messages.msgCmdEmcDisplay(i.getItemMeta().getDisplayName(), Utils.getEMC(plugin, i)));
-                            player.sendMessage(Messages.msgCmdEmcDisplayStack(i.getItemMeta().getDisplayName(), i.getAmount(), Utils.getEMC(plugin, i) * i.getAmount()));
-                        } else {
-                            player.sendMessage(Messages.msgCmdEmcNone(plugin));
-                        }
-                        return;
-                    }
-                    if (plugin.getEmcDefinitions().getEmcExtended().containsKey(i.getType())) {
-                        player.sendMessage(Messages.msgCmdEmcDisplay(i.getType(), Utils.getEMC(plugin, i)));
-                        player.sendMessage(Messages.msgCmdEmcDisplayStack(i.getType(), i.getAmount(), Utils.getEMC(plugin, i) * i.getAmount()));
+                    Double val = Utils.getEMC(plugin, i);
+                    if (val != null) {
+                        String name = ContainerStorage.isCraftable(i, plugin) ? i.getItemMeta().getDisplayName() : i.getType().toString();
+                        player.sendMessage(Messages.msgCmdEmcDisplay(name, val));
+                        player.sendMessage(Messages.msgCmdEmcDisplayStack(name, i.getAmount(), val * i.getAmount()));
                     } else {
                         player.sendMessage(Messages.msgCmdEmcNone(plugin));
                     }
